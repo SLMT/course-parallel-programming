@@ -6,7 +6,7 @@
 #include <cstring>
 #include <unistd.h>
 
-#include "timer.hpp"
+#include "../../timer.hpp"
 
 namespace pp {
 namespace hw2 {

@@ -1,20 +1,23 @@
 # Declaration of variables
 CC = g++
-LINK_FLAGS = -lpthread
+LFLAGS = -lpthread
 
 # File names
 EXEC = hw2_SRCC
 SOURCES = $(wildcard *.cpp)
-OBJECTS = $(SOURCES:.cpp=.o)
+OBJECTS = $(SOURCES:.cpp=.o) timer.o
 
 # Main target
-$(EXEC): $(OBJECTS)
-	$(CC) $(LINK_FLAGS) $(OBJECTS) -o $(EXEC)
+all: $(OBJECTS)
+	$(CC) $(LFLAGS) $(OBJECTS) -o $(EXEC)
 
 # To obtain object files
 %.o: %.cpp
 	$(CC) -c $< -o $@
 
-# To remove generated files
+timer.o: ../../timer.cpp
+	$(CC) -c $< -o $@
+
+# To clean all output files
 clean:
 	rm -f $(EXEC) $(OBJECTS)
