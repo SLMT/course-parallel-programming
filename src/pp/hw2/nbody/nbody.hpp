@@ -5,6 +5,10 @@ namespace pp {
 namespace hw2 {
 namespace nbody {
 
+// ========================
+//  N-Body Basic Functions
+// ========================
+
 typedef struct {
 	double x, y;
 } Vec2;
@@ -15,7 +19,7 @@ typedef struct {
 
 typedef struct {
 	CelestialBody *bodies;
-	int num_body;
+	int num_bodies;
 	double body_mass;
 } Universe;
 
@@ -30,7 +34,25 @@ inline double CalculateGravityForce(double mass, double s_pos, double t_pos) {
 		return force;
 }
 
-void CalculateNewVelocity(Universe *uni, int target, double delta_time);
+Vec2 CalculateTotalForce(Universe *uni, int target);
+
+
+// ====================
+//  X-Window Functions
+// ====================
+
+typedef struct {
+	bool is_enabled;
+	double x_min, y_min;
+	double coord_length, window_length;
+} XWindowArgs;
+
+// ==========================
+//  Other Untility Functions
+// ==========================
+
+Universe *ReadFromFile(const char *filename);
+
 
 } // namespace nbody
 } // namespace hw2
