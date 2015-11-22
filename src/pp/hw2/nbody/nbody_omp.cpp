@@ -9,7 +9,7 @@ namespace pp {
 namespace hw2 {
 namespace nbody {
 
-void NBodyOmpImpl(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args) {
+void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args) {
 	CelestialBody *bodies = uni->bodies;
 	size_t body_count = uni->num_bodies;
 	double mass = uni->body_mass;
@@ -22,11 +22,11 @@ void NBodyOmpImpl(Universe *uni, size_t num_threads, double delta_time, size_t n
 	CelestialBody *tmp = new CelestialBody[body_count];
 
 	// Loop for a few steps
+	size_t i;
 	for (size_t s = 0; s < num_steps; s++) {
 		// Calculate new velocities and positions
 		#pragma omp parallel for default(shared) private(i)
-		{
-			for (size_t i = 0; i < body_count; i++) {
+			for (i = 0; i < body_count; i++) {
 				Vec2 total_force = CalculateTotalForce(uni, i);
 
 				// New Velocity
@@ -36,14 +36,11 @@ void NBodyOmpImpl(Universe *uni, size_t num_threads, double delta_time, size_t n
 				tmp[i].pos.x = bodies[i].pos.x + bodies[i].vel.x * dt;
 				tmp[i].pos.y = bodies[i].pos.y + bodies[i].vel.y * dt;
 			}
-		}
 
 		// Update the states
 		#pragma omp parallel for default(shared) private(i)
-		{
-			for (size_t i = 0; i < body_count; i++)
+			for (i = 0; i < body_count; i++)
 				bodies[i] = tmp[i];
-		}
 	}
 
 	// Deallocate the buffer

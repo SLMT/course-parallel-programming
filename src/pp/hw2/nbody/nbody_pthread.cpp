@@ -65,7 +65,7 @@ void *PThreadTask(void *args) {
 	delete[] tmp;
 }
 
-void NBodyPThreadImpl(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args) {
+void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args) {
 	// Initialize pthread barrier
 	pthread_barrier_t barrier;
 	pthread_barrier_init(&barrier, NULL, num_threads);

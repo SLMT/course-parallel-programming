@@ -13,9 +13,14 @@ hw2_srcc:
 	mv $(HW2_SRCC_DIR)/hw2_SRCC $(BIN_DIR)
 	cd $(HW2_SRCC_DIR) && $(MAKE) clean
 
-hw2_nbody: hw2_nbody_pthread
+hw2_nbody: hw2_nbody_pthread hw2_nbody_omp
 
 hw2_nbody_pthread:
 	cd $(HW2_NBODY_DIR) && $(MAKE) pthread
 	mv $(HW2_NBODY_DIR)/hw2_NB_pthread $(BIN_DIR)
+	cd $(HW2_NBODY_DIR) && $(MAKE) clean
+
+hw2_nbody_omp:
+	cd $(HW2_NBODY_DIR) && $(MAKE) omp
+	mv $(HW2_NBODY_DIR)/hw2_NB_omp $(BIN_DIR)
 	cd $(HW2_NBODY_DIR) && $(MAKE) clean

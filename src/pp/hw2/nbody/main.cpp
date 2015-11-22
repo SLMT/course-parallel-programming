@@ -2,12 +2,17 @@
 #include <cstdlib>
 
 #include "nbody.hpp"
-#include "nbody_pthread.hpp"
+
+#ifndef OMP
+	#include "nbody_pthread.hpp"
+#else
+	#include "nbody_omp.hpp"
+#endif
 
 using pp::hw2::nbody::Universe;
 using pp::hw2::nbody::XWindowArgs;
 using pp::hw2::nbody::ReadFromFile;
-using pp::hw2::nbody::NBodyPThreadImpl;
+using pp::hw2::nbody::NBodySim;
 
 int main(int argc, char const *argv[]) {
 
@@ -42,7 +47,7 @@ int main(int argc, char const *argv[]) {
 
 	// Start running
 	XWindowArgs x_win_args = {x_enabled, x_min, y_min, coord_len, win_len};
-	NBodyPThreadImpl(uni, num_threads, delta_time, num_steps, theta, x_win_args);
+	NBodySim(uni, num_threads, delta_time, num_steps, theta, x_win_args);
 
 	return 0;
 }

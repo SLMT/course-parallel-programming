@@ -3,13 +3,20 @@ CC = g++
 
 # File names
 PTHREAD_EXEC = hw2_NB_pthread
-PTHREAD_OBJS = main.o nbody_pthread.o nbody.o
+OMP_EXEC = hw2_NB_omp
+COMMON_OBJS = nbody.o
 
 # Main target
-all: pthread
+all: pthread omp
 
-pthread: $(PTHREAD_OBJS)
-	$(CC) -lpthread $(PTHREAD_OBJS) -o $(PTHREAD_EXEC)
+pthread: $(COMMON_OBJS) nbody_pthread.o
+	$(CC) -c main.cpp -o main.o
+	$(CC) -lpthread $(COMMON_OBJS) nbody_pthread.o main.o -o $(PTHREAD_EXEC)
+
+omp: $(COMMON_OBJS)
+	$(CC) -c -fopenmp nbody_omp.cpp -o nbody_omp.o
+	$(CC) -c -D OMP main.cpp -o main.o
+	$(CC) -lpthread -fopenmp $(COMMON_OBJS) nbody_omp.o main.o -o $(OMP_EXEC)
 
 # To obtain object files
 %.o: %.cpp
@@ -17,4 +24,4 @@ pthread: $(PTHREAD_OBJS)
 
 # To clean all output files
 clean:
-	rm -f $(PTHREAD_OBJS) $(PTHREAD_EXEC)
+	rm -f *.o $(PTHREAD_EXEC) $(OMP_EXEC)
