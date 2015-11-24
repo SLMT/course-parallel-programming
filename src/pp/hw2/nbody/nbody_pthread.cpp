@@ -4,6 +4,7 @@
 #include <pthread.h>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 namespace pp {
 namespace hw2 {
@@ -19,10 +20,17 @@ typedef struct {
 	Universe *uni;
 	double delta_time;
 	size_t num_steps;
-} PThreadArgs;
+} PThreadSimArgs;
 
-void *PThreadTask(void *args) {
-	PThreadArgs *tas = (PThreadArgs *) args;
+typedef struct {
+	pthread_barrier_t *barrier;
+	size_t num_steps;
+	GUI *gui;
+	Universe *uni;
+} PThreadGUIArgs;
+
+void *PThreadSimTask(void *args) {
+	PThreadSimArgs *tas = (PThreadSimArgs *) args;
 	int tid = tas->thread_id;
 	double dt = tas->delta_time;
 	CelestialBody *bodies = tas->uni->bodies;
@@ -65,14 +73,42 @@ void *PThreadTask(void *args) {
 	delete[] tmp;
 }
 
-void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args) {
+void *PThreadGUITask(void *args) {
+	PThreadGUIArgs *tgas = (PThreadGUIArgs*) args;
+	GUI *gui = tgas->gui;
+	CelestialBody *bodies = tgas->uni->bodies;
+
+	// Loop for a few steps
+	for (size_t s = 0; s < tgas->num_steps; s++) {
+		// Draw all bodies
+		gui->CleanAll();
+		for (size_t i = 0; i < tgas->uni->num_bodies; i++) {
+			gui->DrawAPoint(bodies[i].pos.x, bodies[i].pos.y);
+		}
+
+		// Flush the screen
+		// XXX: Maybe I can put this after barrier
+		gui->Flush();
+
+		// A thread Barrier
+		pthread_barrier_wait(tgas->barrier);
+
+		// Another thread Barrier
+		pthread_barrier_wait(tgas->barrier);
+	}
+}
+
+void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, GUI *gui) {
 	// Initialize pthread barrier
 	pthread_barrier_t barrier;
-	pthread_barrier_init(&barrier, NULL, num_threads);
+	if (gui != NULL)
+		pthread_barrier_init(&barrier, NULL, num_threads + 1);
+	else
+		pthread_barrier_init(&barrier, NULL, num_threads);
 
-	// Create threads
+	// Create simulation threads
 	pthread_t *threads = new pthread_t[num_threads];
-	PThreadArgs *thread_args = new PThreadArgs[num_threads];
+	PThreadSimArgs *thread_args = new PThreadSimArgs[num_threads];
 
 	for(size_t id = 0; id < num_threads; id++) {
 		thread_args[id].thread_id = id;
@@ -81,12 +117,25 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 		thread_args[id].uni = uni;
 		thread_args[id].delta_time = delta_time;
 		thread_args[id].num_steps = num_steps;
-		pthread_create(threads + id, NULL, PThreadTask, (void *) (thread_args + id));
+		pthread_create(threads + id, NULL, PThreadSimTask, (void *) (thread_args + id));
+	}
+
+	// Create a GUI thread
+	pthread_t gui_thread;
+	PThreadGUIArgs gui_args;
+	if (gui != NULL) {
+		gui_args.gui = gui;
+		gui_args.uni = uni;
+		gui_args.barrier = &barrier;
+		gui_args.num_steps = num_steps;
+		pthread_create(&gui_thread, NULL, PThreadGUITask, (void *) &gui_args);
 	}
 
 	// Wait for all thread terminates
 	for(size_t id = 0; id < num_threads; id++)
 		pthread_join(threads[id], NULL);
+	if (gui != NULL)
+		pthread_join(gui_thread, NULL);
 
 	// Free all resource
 	pthread_barrier_destroy(&barrier);

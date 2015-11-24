@@ -36,17 +36,6 @@ inline double CalculateGravityForce(double mass, double s_pos, double t_pos) {
 
 Vec2 CalculateTotalForce(Universe *uni, int target);
 
-
-// ====================
-//  X-Window Functions
-// ====================
-
-typedef struct {
-	bool is_enabled;
-	double x_min, y_min;
-	double coord_length, window_length;
-} XWindowArgs;
-
 // ==========================
 //  Other Untility Functions
 // ==========================

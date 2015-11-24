@@ -10,16 +10,18 @@ namespace nbody {
 class GUI {
 
 public:
-	GUI(unsigned width, unsigned height);
+	GUI(unsigned win_len, double coord_len, double x_min, double y_min);
 	~GUI();
 
 	void CleanAll();
-	void DrawAPoint(unsigned x, unsigned y);
+	void DrawAPoint(double coord_x, double coord_y);
 	void Flush();
 
 private:
 	// Some attributes
-	unsigned width_, height_;
+	unsigned win_len_;
+	double scale_;
+	double x_min_, y_min_;
 
 	// X-Window Componenets
 	Display *display_;

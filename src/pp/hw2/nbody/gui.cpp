@@ -10,10 +10,12 @@ namespace pp {
 namespace hw2 {
 namespace nbody {
 
-GUI::GUI(unsigned width, unsigned height) {
+GUI::GUI(unsigned win_len, double coord_len, double x_min, double y_min) {
 	// Set the width and the height
-	width_ = width;
-	height_ = height;
+	win_len_ = win_len;
+	scale_ = ((double) win_len_) / coord_len;
+	x_min_ = x_min;
+	y_min_ = y_min;
 
 	// Open a connection to the x-window server
 	display_ = XOpenDisplay(NULL);
@@ -30,7 +32,7 @@ GUI::GUI(unsigned width, unsigned height) {
 	color_white_ = WhitePixel(display_, screen_id_);
 
 	// Create a window
-	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, width_, height_, 0, color_black_, color_white_);
+	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, win_len_, win_len_, 0, color_black_, color_white_);
 
 	// Create a graphic context
 	XGCValues values;
@@ -50,12 +52,12 @@ GUI::~GUI() {
 void GUI::CleanAll() {
 	// Draw a rectangle to clean everything
 	XSetForeground(display_, gc_, color_black_);
-	XFillRectangle(display_, window_, gc_, 0, 0, width_, height_);
+	XFillRectangle(display_, window_, gc_, 0, 0, win_len_, win_len_);
 }
 
-void GUI::DrawAPoint(unsigned x, unsigned y) {
+void GUI::DrawAPoint(double coord_x, double coord_y) {
 	XSetForeground(display_, gc_, color_white_);
-	XDrawPoint(display_, window_, gc_, x, y);
+	XDrawPoint(display_, window_, gc_, (unsigned) ((coord_x - x_min_) * scale_), (unsigned)((coord_y - y_min_) * scale_));
 }
 
 void GUI::Flush() {
@@ -65,23 +67,3 @@ void GUI::Flush() {
 } // namespace nbody
 } // namespace hw2
 } // namespace pp
-
-
-const double PI = 3.14159;
-
-using pp::hw2::nbody::GUI;
-
-int main(int argc,char *argv[])
-{
-	GUI *gui = new GUI(500, 500);
-
-	gui->CleanAll();
-	for( int i = 0; i < 100; i++ )
-		gui->DrawAPoint(int(200*cos(i/100.0*2*PI))+250, 250+int(200*sin(i/100.0*2*PI)));
-	for( int i = 0; i < 50; i++)
-		gui->DrawAPoint(int(100*cos(i/50.0*2*PI))+250, 250+int(100*sin(i/50.0*2*PI)));
-	gui->Flush();
-
-	sleep(10);
-	return 0;
-}

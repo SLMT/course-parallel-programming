@@ -4,12 +4,13 @@
 #include <cstdio>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 namespace pp {
 namespace hw2 {
 namespace nbody {
 
-void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, XWindowArgs xwin_args);
+void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_steps, double theta, GUI *gui);
 
 } // namespace nbody
 } // namespace hw2

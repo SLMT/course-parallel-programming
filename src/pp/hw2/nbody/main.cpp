@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 #ifndef OMP
 	#include "nbody_pthread.hpp"
@@ -10,9 +11,9 @@
 #endif
 
 using pp::hw2::nbody::Universe;
-using pp::hw2::nbody::XWindowArgs;
 using pp::hw2::nbody::ReadFromFile;
 using pp::hw2::nbody::NBodySim;
+using pp::hw2::nbody::GUI;
 
 int main(int argc, char const *argv[]) {
 
@@ -40,14 +41,18 @@ int main(int argc, char const *argv[]) {
 	sscanf(argv[8], "%lf", &x_min);
 	sscanf(argv[9], "%lf", &y_min);
 	sscanf(argv[10], "%lf", &coord_len);
-	sscanf(argv[11], "%lf", &win_len);
+	win_len = (unsigned) strtol(argv[11], NULL, 10);
 
 	// Read the input file
 	Universe *uni = ReadFromFile(filename);
 
+	// Create a GUI for demonstration
+	GUI *gui = NULL;
+	if (x_enabled)
+		new GUI(win_len, coord_len, x_min, y_min);
+
 	// Start running
-	XWindowArgs x_win_args = {x_enabled, x_min, y_min, coord_len, win_len};
-	NBodySim(uni, num_threads, delta_time, num_steps, theta, x_win_args);
+	NBodySim(uni, num_threads, delta_time, num_steps, theta, gui);
 
 	return 0;
 }
