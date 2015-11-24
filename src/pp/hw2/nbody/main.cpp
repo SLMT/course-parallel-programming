@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <unistd.h>
 
 #include "nbody.hpp"
 #include "gui.hpp"
@@ -45,11 +46,12 @@ int main(int argc, char const *argv[]) {
 
 	// Read the input file
 	Universe *uni = ReadFromFile(filename);
+	uni->body_mass = mass;
 
 	// Create a GUI for demonstration
 	GUI *gui = NULL;
 	if (x_enabled)
-		new GUI(win_len, coord_len, x_min, y_min);
+		gui = new GUI(win_len, coord_len, x_min, y_min);
 
 	// Start running
 	NBodySim(uni, num_threads, delta_time, num_steps, theta, gui);

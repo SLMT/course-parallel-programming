@@ -51,6 +51,7 @@ void *PThreadSimTask(void *args) {
 				// New Velocity
 				tmp[i].vel.x = bodies[i].vel.x + total_force.x * dt / mass;
 				tmp[i].vel.y = bodies[i].vel.y + total_force.y * dt / mass;
+
 				// New position
 				tmp[i].pos.x = bodies[i].pos.x + bodies[i].vel.x * dt;
 				tmp[i].pos.y = bodies[i].pos.y + bodies[i].vel.y * dt;
