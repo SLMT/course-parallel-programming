@@ -4,6 +4,7 @@
 #include <omp.h>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 namespace pp {
 namespace hw2 {
@@ -41,6 +42,18 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 		#pragma omp parallel for default(shared) private(i)
 			for (i = 0; i < body_count; i++)
 				bodies[i] = tmp[i];
+
+		// Draw the results
+		if (gui != NULL) {
+			// Draw all points
+			gui->CleanAll();
+			for (i = 0; i < body_count; i++) {
+				gui->DrawAPoint(bodies[i].pos.x, bodies[i].pos.y);
+			}
+
+			// Flush the screen
+			gui->Flush();
+		}
 	}
 
 	// Deallocate the buffer
