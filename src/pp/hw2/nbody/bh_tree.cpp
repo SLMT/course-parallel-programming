@@ -1,5 +1,9 @@
 #include "bh_tree.hpp"
 
+#include <vector>
+
+using std::vector;
+
 namespace pp {
 namespace hw2 {
 namespace nbody {
@@ -9,6 +13,10 @@ BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	uni_ = uni;
 	root_min_ = min;
 	root_max_ = max;
+
+	// TODO: Create a root node
+	// TODO: Create a list for all bodies
+	// TODO: Split the root
 }
 
 BHTree::~BHTree() {
@@ -33,74 +41,102 @@ Node *BHTree::NewNode(int body_id, Vec2 min, Vec2 max) {
 	return node;
 }
 
-void BHTree::InsertABody(int body_id) {
-	Vec2 body_pos = (uni_->bodies[body_id]).pos;
-	Vec2 new_min, new_max;
+void BHTree::CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max) {
+	size_t size = bodies.size();
+	if (size == 0)
+		return;
 
-	// If there is no root
-	if (root_ == NULL) {
-		root_ = new NewNode(body_id, root_min_, root_max_);
+	if (size == 1) {
+		// Create a external node
+		*region_ptr = NewNode(bodies->front(), min, max);
 		return;
 	}
 
-	// If there is a root, find the region it should be in
-	Node *parent = root_;
-	Node **target;
-	while () {
-		// TODO: Check if the node is a external node
-		// TODO: Write a method to put a node at a correct position
+	// Create a internal node
+	*region_ptr = NewNode(-1, min, max);
+	InsertASplitingJob(*region_ptr, bodies)
+}
 
-		Vec2 min = parent->coord_min;
-		Vec2 mid = parent->coord_mid;
-		Vec2 max = parent->coord_max;
+void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
+	CelestialBody *bodies = uni_->bodies;
+	Vec2 tmp;
 
-		if (body_pos.x < mid.x && body_pos.y < mid.y) { // North-West
-			if (parent->nw == NULL) {
-				new_min = min;
-				new_max = mid;
-			}
-			target = &(parent->nw);
-		} else if (body_pos.x > mid.x && body_pos.y < mid.y) { // North-East
-			if (parent->ne == NULL) {
-				new_min.x = mid.x;
-				new_min.y = min.y;
-				new_max.x = max.x;
-				new_max.y = mid.y;
-			}
-			target = &(parent->ne);
-		} else if (body_pos.x < mid.x && body_pos.y > mid.y) { // South-West
-			if (parent->sw == NULL) {
-				new_min.x = min.x;
-				new_min.y = mid.y;
-				new_max.x = mid.x;
-				new_max.y = max.y;
-			}
-			target = &(parent->sw);
-		} else { // South-East
-			if (parent->se == NULL) {
-				new_min = mid;
-				new_max = max;
-			}
-			target = &(parent->se);
-		}
+	// Allocate containers for regions
+	vector<int> *nw_bodies = new vector<int>();
+	vector<int> *ne_bodies = new vector<int>();
+	vector<int> *sw_bodies = new vector<int>();
+	vector<int> *se_bodies = new vector<int>();
 
-		// If there is no such child yet, create one then update root
-		if (*target == NULL) {
-			*target = new NewNode(body_id, new_min, new_max);
-			// TODO: Update the mass and center of the parent
+	// Traverse all the bodies
+	Vec2 mid = parent->coord_mid;
+	for (vector<int>::iterator it = body_ids->begin(); it != body_ids->end(); ++it) {
+		int id = *it;
 
-			return;
-		}
+		// Calculate the center of the mass
+		tmp.x += bodies[id].pos.x;
+		tmp.y += bodies[id].pos.y;
 
-		// TODO: Update the mass and center of the parent by child
-		// TODO: Go down next level
+		// Put the body to a proper region
+		Vec2 body_pos = (uni_->bodies[body_id]).pos;
+		if (body_pos.x < mid.x && body_pos.y < mid.y) // North-West
+			nw_bodies->push_back();
+		else if (body_pos.x > mid.x && body_pos.y < mid.y) // North-East
+			ne_bodies->push_back();
+		else if (body_pos.x < mid.x && body_pos.y > mid.y) // South-West
+			sw_bodies->push_back();
+		else // South-East
+			se_bodies->push_back();
 	}
+
+	// Record the center of mass and total mass for the node
+	size_t body_count = body_ids->size();
+	parent->center_of_mass.x = tmp.x / body_count;
+	parent->center_of_mass.y = tmp.y / body_count;
+	parent->body_count = body_count;
+
+	// Free the input container
+	delete body_ids;
+
+	// == Create regions ==
+	Vec2 min, max;
+
+	// North-West
+	min = parent->coord_min;
+	max = parent->coord_max;
+	CreateRegion(&(parent->nw), nw_bodies, min, max);
+
+	// North-East
+	min.x = parent->coord_mid.x;
+	min.y = parent->coord_min.y;
+	max.x = parent->coord_max.x;
+	max.y = parent->coord_mid.y;
+	CreateRegion(&(parent->ne), ne_bodies, min, max);
+
+	// South-West
+	min.x = parent->coord_min.x;
+	min.y = parent->coord_mid.y;
+	max.x = parent->coord_mid.x;
+	max.y = parent->coord_max.y;
+	CreateRegion(&(parent->sw), sw_bodies, min, max);
+
+	// South-East
+	min = parent->coord_mid;
+	max = parent->coord_max;
+	CreateRegion(&(parent->se), se_bodies, min, max);
+}
+
+void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
+	// TODO: Insert a spliting job (in a critical section)
+}
+
+void BHTree::DoASplitingJob() {
+	// TODO: Retrieve a job (in a critical section)
+	// TODO: Split the node
 }
 
 void BHTree::PrintInDFS() {
 	// TODO: Traverse and print all nodes
 }
-
 
 } // namespace nbody
 } // namespace hw2

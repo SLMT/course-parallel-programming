@@ -13,12 +13,17 @@ public:
 	BHTree(Universe *uni, Vec2 min, Vec2 max);
 	~BHTree();
 
-	void InsertABody(int body_id);
-	void PrintInDFS(); // For debugging
+	// For multi-threading
+	void DoASplittingJob();
+
+	// For debugging
+	void PrintInDFS();
+
 private:
+	// Node structure
 	typedef struct {
 		Vec2 center_of_mass;
-		double total_mass;
+		int body_count;
 		Vec2 coord_min, coord_mid, coord_max;
 		int body_id; // This is only used when the node is a external node
 		Node *nw, *ne, *sw, *se;
@@ -26,6 +31,17 @@ private:
 
 	Node *NewNode(int body_id, Vec2 min, Vec2 max);
 
+	// For spliting
+	typedef struct {
+		Node *parent;
+		vector<int> *bodies;
+	} SplittingJob;
+
+	void InsertASplittingJob(Node *parent, vector<int> *bodies);
+	void SplitTheNode(Node *parent, vector<int> *body_ids);
+	void CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max);
+
+	// Properties
 	Node *root_;
 	Universe *uni_;
 	Vec2 root_min_, root_max_;
