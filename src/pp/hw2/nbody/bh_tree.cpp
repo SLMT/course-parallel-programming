@@ -128,19 +128,29 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 	min = parent->coord_mid;
 	max = parent->coord_max;
 	CreateRegion(&(parent->se), se_bodies, min, max);
+
+	// TODO: Finish a job, increment the finish job counter
+	// TODO: Check if there is more jobs
+		// TODO: If it's not, notify all threads to leave
 }
 
 void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
 	SplittingJob job = {parent, bodies};
 
-	// Insert a spliting job
 	pthread_mutex_lock(&job_queue_mutex_);
+	// TODO: Increment the job counter
+
+	// Insert a spliting job
 	job_queue_->push_back(job);
+
+	// TODO: Notify the waitting threads
+
 	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
 void BHTree::DoASplitingJob() {
 	// TODO: Retrieve a job (in a critical section)
+		// TODO: If there is no job for now, wait for a new job
 	// TODO: Split the node
 }
 

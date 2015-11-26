@@ -21,6 +21,8 @@ public:
 	// For debugging
 	void PrintInDFS();
 
+	// TODO: Add a API for check job status (more jobs)
+
 private:
 	// Node structure
 	typedef struct {
