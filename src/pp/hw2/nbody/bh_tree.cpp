@@ -17,6 +17,11 @@ BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	// TODO: Create a root node
 	// TODO: Create a list for all bodies
 	// TODO: Split the root
+
+	// Create the job queue
+	job_queue_ = new std::list<SplittingJob>();
+	pthread_mutex_init(&job_queue_mutex_, NULL);
+	pthread_cond_init(&job_queue_cond_, NULL);
 }
 
 BHTree::~BHTree() {
@@ -52,9 +57,9 @@ void BHTree::CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2
 		return;
 	}
 
-	// Create a internal node
+	// Create an internal node
 	*region_ptr = NewNode(-1, min, max);
-	InsertASplitingJob(*region_ptr, bodies)
+	InsertASplitingJob(*region_ptr, bodies);
 }
 
 void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
@@ -126,7 +131,12 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 }
 
 void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
-	// TODO: Insert a spliting job (in a critical section)
+	SplittingJob job = {parent, bodies};
+
+	// Insert a spliting job
+	pthread_mutex_lock(&job_queue_mutex_);
+	job_queue_->push_back(job);
+	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
 void BHTree::DoASplitingJob() {

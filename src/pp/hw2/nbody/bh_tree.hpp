@@ -1,6 +1,8 @@
 #ifndef PP_HW2_NBODY_BHTREE_H_
 #define PP_HW2_NBODY_BHTREE_H_
 
+#include <list>
+
 #include "nbody.hpp"
 
 namespace pp {
@@ -36,6 +38,9 @@ private:
 		Node *parent;
 		vector<int> *bodies;
 	} SplittingJob;
+	std::list<SplittingJob> *job_queue_;
+	pthread_mutex_t job_queue_mutex_;
+	pthread_cond_t job_queue_cond_;
 
 	void InsertASplittingJob(Node *parent, vector<int> *bodies);
 	void SplitTheNode(Node *parent, vector<int> *body_ids);
