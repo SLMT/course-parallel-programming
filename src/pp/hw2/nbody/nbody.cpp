@@ -39,7 +39,7 @@ Universe *ReadFromFile(const char *filename) {
 
 	// Read the first line
 	size_t num_bodies;
-	fscanf(file, "%u", &num_bodies);
+	fscanf(file, "%lu", &num_bodies);
 
 	// Read the data of bodies
 	CelestialBody *bodies = new CelestialBody[num_bodies];

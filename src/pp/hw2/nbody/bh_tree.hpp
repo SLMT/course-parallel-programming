@@ -2,12 +2,34 @@
 #define PP_HW2_NBODY_BHTREE_H_
 
 #include <list>
+#include <vector>
+#include <pthread.h>
 
 #include "nbody.hpp"
+
+using std::vector;
+using std::list;
 
 namespace pp {
 namespace hw2 {
 namespace nbody {
+
+class BHTreeNode {
+	friend class BHTree;
+
+public:
+	BHTreeNode(Vec2 min, Vec2 max);
+	BHTreeNode(Universe *uni, int body_id, Vec2 min, Vec2 max);
+
+private:
+	static const int kInternalNode = -1;
+
+	Vec2 center_of_mass_;
+	int body_count_;
+	Vec2 coord_min_, coord_mid_, coord_max_;
+	int body_id_; // This is only used when the node is a external node
+	BHTreeNode *nw_, *ne_, *sw_, *se_;
+};
 
 class BHTree {
 
@@ -17,46 +39,33 @@ public:
 
 	// For multi-threading
 	void DoASplittingJob();
+	bool IsThereMoreJobs();
+
+	// Free all resource
+	void Delete(BHTreeNode *parent);
 
 	// For debugging
 	void PrintInDFS();
-
-	// TODO: Add a API for check job status (more jobs)
-	bool IsThereMoreJobs();
+	void PrintInDFS(BHTreeNode *node);
 
 private:
-	// Node structure
-	typedef struct {
-		Vec2 center_of_mass;
-		int body_count;
-		Vec2 coord_min, coord_mid, coord_max;
-		int body_id; // This is only used when the node is a external node
-		Node *nw, *ne, *sw, *se;
-	} Node;
-	const int INTERNAL_NODE = -1;
-
-	Node *NewNode(int body_id, Vec2 min, Vec2 max);
 
 	// For spliting
 	typedef struct {
-		Node *parent;
+		BHTreeNode *parent;
 		vector<int> *bodies;
 	} SplittingJob;
-	std::list<SplittingJob> *job_queue_;
+	list<SplittingJob> *job_queue_;
 	pthread_mutex_t job_queue_mutex_;
 	pthread_cond_t job_queue_cond_;
 	size_t job_count_, finish_count_;
 
-	void InsertASplittingJob(Node *parent, vector<int> *bodies);
-	void SplitTheNode(Node *parent, vector<int> *body_ids);
-	void CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max);
-
-	// Other methods
-	void DFS(Node *node, void (*action)(Node *node));
-	void PrintNode(Node *node);
+	void InsertASplittingJob(BHTreeNode *parent, vector<int> *bodies);
+	void SplitTheNode(BHTreeNode *parent, vector<int> *body_ids);
+	void CreateRegion(BHTreeNode **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max);
 
 	// Properties
-	Node *root_;
+	BHTreeNode *root_;
 	Universe *uni_;
 	Vec2 root_min_, root_max_;
 };

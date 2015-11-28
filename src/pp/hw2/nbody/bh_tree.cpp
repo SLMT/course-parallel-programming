@@ -3,11 +3,54 @@
 #include <cstdio>
 #include <vector>
 
+#include "nbody.hpp"
+
 using std::vector;
+
+int main(int argc, char const *argv[]) {
+
+	pp::hw2::nbody::Universe *uni = pp::hw2::nbody::ReadFromFile("tree_test.txt");
+	uni->body_mass = 1.0;
+
+	pp::hw2::nbody::Vec2 min = {0.0, 0.0}, max = {100.0, 100.0};
+	pp::hw2::nbody::BHTree *tree = new pp::hw2::nbody::BHTree(uni, min, max);
+	while (tree->IsThereMoreJobs())
+		tree->DoASplittingJob();
+	tree->PrintInDFS();
+
+	return 0;
+}
 
 namespace pp {
 namespace hw2 {
 namespace nbody {
+
+BHTreeNode::BHTreeNode(Vec2 min, Vec2 max) {
+	coord_min_ = min;
+	coord_mid_.x = (min.x + max.x) / 2;
+	coord_mid_.y = (min.y + max.y) / 2;
+	coord_max_ = max;
+	body_id_ = kInternalNode;
+	nw_ = NULL;
+	ne_ = NULL;
+	sw_ = NULL;
+	se_ = NULL;
+}
+
+BHTreeNode::BHTreeNode(Universe *uni, int body_id, Vec2 min, Vec2 max) {
+	center_of_mass_.x = uni->bodies[body_id].pos.x;
+	center_of_mass_.y = uni->bodies[body_id].pos.y;
+	body_count_ = 1;
+	coord_min_ = min;
+	coord_mid_.x = (min.x + max.x) / 2;
+	coord_mid_.y = (min.y + max.y) / 2;
+	coord_max_ = max;
+	body_id_ = body_id;
+	nw_ = NULL;
+	ne_ = NULL;
+	sw_ = NULL;
+	se_ = NULL;
+}
 
 BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	root_ = NULL;
@@ -26,58 +69,56 @@ BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	// XXX: Not consider the size = 0
 	if (uni->num_bodies == 1) {
 		// Create a external root node
-		root_ = NewNode(0, min, max);
+		root_ = new BHTreeNode(uni, 0, min, max);
 	} else {
 		// Create an internal root node then split it
-		root_ = NewNode(INTERNAL_NODE, min, max);
-		vector<int> body_ids = new vector<int>();
+		root_ = new BHTreeNode(min, max);
+		vector<int> *body_ids = new vector<int>();
 		for (size_t i = 0; i < uni->num_bodies; i++)
-			body_ids.push_back(i);
+			body_ids->push_back(i);
+		job_count_++;
 		SplitTheNode(root_, body_ids);
 	}
 }
 
 BHTree::~BHTree() {
-	// TODO: Traverse and free all nodes
+	// Traverse and free all nodes
+	Delete(root_);
 }
 
-Node *BHTree::NewNode(int body_id, Vec2 min, Vec2 max) {
-	Node *node = new Node();
+void BHTree::Delete(BHTreeNode *parent) {
+	// Go deeper
+	if (parent->nw_ != NULL)
+		Delete(parent->nw_);
+	if (parent->ne_ != NULL)
+		Delete(parent->ne_);
+	if (parent->sw_ != NULL)
+		Delete(parent->sw_);
+	if (parent->se_ != NULL)
+		Delete(parent->se_);
 
-	node->center_of_mass = {uni_[body_id].pos.x, uni_[body_id].pos.y};
-	node->total_mass = uni_->body_mass;
-	node->coord_min = min;
-	node->coord_mid.x = (min.x + max.x) / 2;
-	node->coord_mid.y = (min.y + max.y) / 2;
-	node->coord_max = max;
-	node->body_id = body_id;
-	node->nw = NULL;
-	node->ne = NULL;
-	node->sw = NULL;
-	node->se = NULL;
-
-	return node;
+	delete parent;
 }
 
-void BHTree::CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max) {
-	size_t size = bodies.size();
+void BHTree::CreateRegion(BHTreeNode **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max) {
+	size_t size = bodies->size();
 	if (size == 0)
 		return;
 
 	if (size == 1) {
 		// Create a external node
-		*region_ptr = NewNode(bodies->front(), min, max);
+		*region_ptr = new BHTreeNode(uni_, bodies->front(), min, max);
 		return;
 	}
 
 	// Create an internal node
-	*region_ptr = NewNode(INTERNAL_NODE, min, max);
-	InsertASplitingJob(*region_ptr, bodies);
+	*region_ptr = new BHTreeNode(min, max);
+	InsertASplittingJob(*region_ptr, bodies);
 }
 
-void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
+void BHTree::SplitTheNode(BHTreeNode *parent, vector<int> *body_ids) {
 	CelestialBody *bodies = uni_->bodies;
-	Vec2 tmp;
+	Vec2 tmp = {0.0, 0.0};
 
 	// Allocate containers for regions
 	vector<int> *nw_bodies = new vector<int>();
@@ -86,7 +127,7 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 	vector<int> *se_bodies = new vector<int>();
 
 	// Traverse all the bodies
-	Vec2 mid = parent->coord_mid;
+	Vec2 mid = parent->coord_mid_;
 	for (vector<int>::iterator it = body_ids->begin(); it != body_ids->end(); ++it) {
 		int id = *it;
 
@@ -95,52 +136,55 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 		tmp.y += bodies[id].pos.y;
 
 		// Put the body to a proper region
-		Vec2 body_pos = (uni_->bodies[body_id]).pos;
-		if (body_pos.x < mid.x && body_pos.y < mid.y) // North-West
-			nw_bodies->push_back();
-		else if (body_pos.x > mid.x && body_pos.y < mid.y) // North-East
-			ne_bodies->push_back();
-		else if (body_pos.x < mid.x && body_pos.y > mid.y) // South-West
-			sw_bodies->push_back();
-		else // South-East
-			se_bodies->push_back();
+		Vec2 body_pos = (uni_->bodies[id]).pos;
+		if (body_pos.x < mid.x && body_pos.y < mid.y) { // North-West
+			nw_bodies->push_back(id);
+		}else if (body_pos.x > mid.x && body_pos.y < mid.y) { // North-East
+			ne_bodies->push_back(id);
+		}else if (body_pos.x < mid.x && body_pos.y > mid.y) { // South-West
+			sw_bodies->push_back(id);
+		}else { // South-East
+			se_bodies->push_back(id);
+		}
 	}
 
 	// Record the center of mass and total mass for the node
 	size_t body_count = body_ids->size();
-	parent->center_of_mass.x = tmp.x / body_count;
-	parent->center_of_mass.y = tmp.y / body_count;
-	parent->body_count = body_count;
+	parent->center_of_mass_.x = tmp.x / body_count;
+	parent->center_of_mass_.y = tmp.y / body_count;
+	parent->body_count_ = body_count;
 
 	// Free the input container
 	delete body_ids;
 
+	// ====================
 	// == Create regions ==
+	// ====================
 	Vec2 min, max;
 
 	// North-West
-	min = parent->coord_min;
-	max = parent->coord_max;
-	CreateRegion(&(parent->nw), nw_bodies, min, max);
+	min = parent->coord_min_;
+	max = parent->coord_mid_;
+	CreateRegion(&(parent->nw_), nw_bodies, min, max);
 
 	// North-East
-	min.x = parent->coord_mid.x;
-	min.y = parent->coord_min.y;
-	max.x = parent->coord_max.x;
-	max.y = parent->coord_mid.y;
-	CreateRegion(&(parent->ne), ne_bodies, min, max);
+	min.x = parent->coord_mid_.x;
+	min.y = parent->coord_min_.y;
+	max.x = parent->coord_max_.x;
+	max.y = parent->coord_mid_.y;
+	CreateRegion(&(parent->ne_), ne_bodies, min, max);
 
 	// South-West
-	min.x = parent->coord_min.x;
-	min.y = parent->coord_mid.y;
-	max.x = parent->coord_mid.x;
-	max.y = parent->coord_max.y;
-	CreateRegion(&(parent->sw), sw_bodies, min, max);
+	min.x = parent->coord_min_.x;
+	min.y = parent->coord_mid_.y;
+	max.x = parent->coord_mid_.x;
+	max.y = parent->coord_max_.y;
+	CreateRegion(&(parent->sw_), sw_bodies, min, max);
 
 	// South-East
-	min = parent->coord_mid;
-	max = parent->coord_max;
-	CreateRegion(&(parent->se), se_bodies, min, max);
+	min = parent->coord_mid_;
+	max = parent->coord_max_;
+	CreateRegion(&(parent->se_), se_bodies, min, max);
 
 	// Critical Section
 	pthread_mutex_lock(&job_queue_mutex_);
@@ -154,7 +198,7 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
-void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
+void BHTree::InsertASplittingJob(BHTreeNode *parent, vector<int> *bodies) {
 	SplittingJob job = {parent, bodies};
 
 	pthread_mutex_lock(&job_queue_mutex_);
@@ -167,7 +211,7 @@ void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
 	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
-void BHTree::DoASplitingJob() {
+void BHTree::DoASplittingJob() {
 	SplittingJob job;
 
 	// Retrieve a job
@@ -182,7 +226,8 @@ void BHTree::DoASplitingJob() {
 		pthread_cond_wait(&job_queue_cond_, &job_queue_mutex_);
 	}
 
-	job = job_queue_->pop_front();
+	job = job_queue_->front();
+	job_queue_->pop_front();
 
 	pthread_mutex_unlock(&job_queue_mutex_);
 
@@ -190,7 +235,7 @@ void BHTree::DoASplitingJob() {
 	SplitTheNode(job.parent, job.bodies);
 }
 
-void BHTree::IsThereMoreJobs() {
+bool BHTree::IsThereMoreJobs() {
 	bool result;
 
 	pthread_mutex_lock(&job_queue_mutex_);
@@ -201,27 +246,26 @@ void BHTree::IsThereMoreJobs() {
 }
 
 void BHTree::PrintInDFS() {
-	DFS(root_, &PrintNode);
+	PrintInDFS(root_);
 }
 
-void BHTree::DFS(Node *node, void (*action)(Node *node)) {
+void BHTree::PrintInDFS(BHTreeNode *node) {
 	// Go deeper
-	if (node->nw != NULL)
-		DFS(node->nw, action);
-	if (node->ne != NULL)
-		DFS(node->ne, action);
-	if (node->sw != NULL)
-		DFS(node->sw, action);
-	if (node->se != NULL)
-		DFS(node->se, action);
+	if (node->nw_ != NULL)
+		PrintInDFS(node->nw_);
+	if (node->ne_ != NULL)
+		PrintInDFS(node->ne_);
+	if (node->sw_ != NULL)
+		PrintInDFS(node->sw_);
+	if (node->se_ != NULL)
+		PrintInDFS(node->se_);
 
 	// Execute the action
-	if (node->body_id != INTERNAL_NODE)
-		action(node);
-}
-
-void BHTree::PrintNode(Node *node) {
-	printf("Body Id: %d\n", node->body_id);
+	if (node->body_id_ != BHTreeNode::kInternalNode) {
+		printf("Body Id: %d\n", node->body_id_);
+	} else {
+		printf("Center of mass: (%lf, %lf), count: %d\n", node->center_of_mass_.x, node->center_of_mass_.y, node->body_count_);
+	}
 }
 
 } // namespace nbody
