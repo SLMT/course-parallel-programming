@@ -18,6 +18,7 @@ Vec2 CalculateTotalForce(Universe *uni, int target) {
 	for (size_t i = 0; i < uni->num_bodies; i++) {
 		if (i != target) {
 			// Calculate the distance
+			// XXX: The distance might need a minimun value
 			dis_x = bodies[i].pos.x - bodies[target].pos.x;
 			dis_y = bodies[i].pos.y - bodies[target].pos.y;
 			dis_total = sqrt(dis_x * dis_x + dis_y * dis_y);

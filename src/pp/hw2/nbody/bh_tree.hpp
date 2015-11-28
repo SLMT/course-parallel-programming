@@ -22,6 +22,7 @@ public:
 	void PrintInDFS();
 
 	// TODO: Add a API for check job status (more jobs)
+	bool IsThereMoreJobs();
 
 private:
 	// Node structure
@@ -32,6 +33,7 @@ private:
 		int body_id; // This is only used when the node is a external node
 		Node *nw, *ne, *sw, *se;
 	} Node;
+	const int INTERNAL_NODE = -1;
 
 	Node *NewNode(int body_id, Vec2 min, Vec2 max);
 
@@ -43,10 +45,15 @@ private:
 	std::list<SplittingJob> *job_queue_;
 	pthread_mutex_t job_queue_mutex_;
 	pthread_cond_t job_queue_cond_;
+	size_t job_count_, finish_count_;
 
 	void InsertASplittingJob(Node *parent, vector<int> *bodies);
 	void SplitTheNode(Node *parent, vector<int> *body_ids);
 	void CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2 max);
+
+	// Other methods
+	void DFS(Node *node, void (*action)(Node *node));
+	void PrintNode(Node *node);
 
 	// Properties
 	Node *root_;

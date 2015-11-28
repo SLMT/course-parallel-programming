@@ -1,5 +1,6 @@
 #include "bh_tree.hpp"
 
+#include <cstdio>
 #include <vector>
 
 using std::vector;
@@ -14,14 +15,26 @@ BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	root_min_ = min;
 	root_max_ = max;
 
-	// TODO: Create a root node
-	// TODO: Create a list for all bodies
-	// TODO: Split the root
-
 	// Create the job queue
 	job_queue_ = new std::list<SplittingJob>();
 	pthread_mutex_init(&job_queue_mutex_, NULL);
 	pthread_cond_init(&job_queue_cond_, NULL);
+	job_count_ = 0;
+	finish_count_ = 0;
+
+	// Create a root node
+	// XXX: Not consider the size = 0
+	if (uni->num_bodies == 1) {
+		// Create a external root node
+		root_ = NewNode(0, min, max);
+	} else {
+		// Create an internal root node then split it
+		root_ = NewNode(INTERNAL_NODE, min, max);
+		vector<int> body_ids = new vector<int>();
+		for (size_t i = 0; i < uni->num_bodies; i++)
+			body_ids.push_back(i);
+		SplitTheNode(root_, body_ids);
+	}
 }
 
 BHTree::~BHTree() {
@@ -58,7 +71,7 @@ void BHTree::CreateRegion(Node **region_ptr, vector<int> *bodies, Vec2 min, Vec2
 	}
 
 	// Create an internal node
-	*region_ptr = NewNode(-1, min, max);
+	*region_ptr = NewNode(INTERNAL_NODE, min, max);
 	InsertASplitingJob(*region_ptr, bodies);
 }
 
@@ -129,33 +142,86 @@ void BHTree::SplitTheNode(Node *parent, vector<int> *body_ids) {
 	max = parent->coord_max;
 	CreateRegion(&(parent->se), se_bodies, min, max);
 
-	// TODO: Finish a job, increment the finish job counter
-	// TODO: Check if there is more jobs
-		// TODO: If it's not, notify all threads to leave
+	// Critical Section
+	pthread_mutex_lock(&job_queue_mutex_);
+
+	// Finish a job, increment the finish job counter
+	finish_count_++;
+
+	// Notify threads to retrieve the pending jobs
+	pthread_cond_broadcast(&job_queue_cond_);
+
+	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
 void BHTree::InsertASplitingJob(Node *parent, vector<int> *bodies) {
 	SplittingJob job = {parent, bodies};
 
 	pthread_mutex_lock(&job_queue_mutex_);
-	// TODO: Increment the job counter
+	// Increment the job counter
+	job_count_++;
 
 	// Insert a spliting job
 	job_queue_->push_back(job);
-
-	// TODO: Notify the waitting threads
 
 	pthread_mutex_unlock(&job_queue_mutex_);
 }
 
 void BHTree::DoASplitingJob() {
-	// TODO: Retrieve a job (in a critical section)
-		// TODO: If there is no job for now, wait for a new job
-	// TODO: Split the node
+	SplittingJob job;
+
+	// Retrieve a job
+	pthread_mutex_lock(&job_queue_mutex_);
+
+	while (job_queue_->size() == 0) {
+		// If there is no more job, leave early
+		if (job_count_ <= finish_count_) {
+			pthread_mutex_unlock(&job_queue_mutex_);
+			return;
+		}
+		pthread_cond_wait(&job_queue_cond_, &job_queue_mutex_);
+	}
+
+	job = job_queue_->pop_front();
+
+	pthread_mutex_unlock(&job_queue_mutex_);
+
+	// Do the job
+	SplitTheNode(job.parent, job.bodies);
+}
+
+void BHTree::IsThereMoreJobs() {
+	bool result;
+
+	pthread_mutex_lock(&job_queue_mutex_);
+	result = job_count_ > finish_count_;
+	pthread_mutex_unlock(&job_queue_mutex_);
+
+	return result;
 }
 
 void BHTree::PrintInDFS() {
-	// TODO: Traverse and print all nodes
+	DFS(root_, &PrintNode);
+}
+
+void BHTree::DFS(Node *node, void (*action)(Node *node)) {
+	// Go deeper
+	if (node->nw != NULL)
+		DFS(node->nw, action);
+	if (node->ne != NULL)
+		DFS(node->ne, action);
+	if (node->sw != NULL)
+		DFS(node->sw, action);
+	if (node->se != NULL)
+		DFS(node->se, action);
+
+	// Execute the action
+	if (node->body_id != INTERNAL_NODE)
+		action(node);
+}
+
+void BHTree::PrintNode(Node *node) {
+	printf("Body Id: %d\n", node->body_id);
 }
 
 } // namespace nbody
