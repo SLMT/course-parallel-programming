@@ -5,10 +5,15 @@
 
 #include "nbody.hpp"
 #include "gui.hpp"
+#include "bh_tree.hpp"
 
 namespace pp {
 namespace hw2 {
 namespace nbody {
+
+typedef struct {
+	BHTree *tree;
+} BHTreePack;
 
 typedef struct {
 	// Thread info
@@ -20,6 +25,9 @@ typedef struct {
 	Universe *uni;
 	double delta_time;
 	size_t num_steps;
+
+	// BH-Tree
+	BHTreePack *bh;
 } PThreadSimArgs;
 
 typedef struct {
@@ -27,6 +35,7 @@ typedef struct {
 	size_t num_steps;
 	GUI *gui;
 	Universe *uni;
+	BHTreePack *bh;
 } PThreadGUIArgs;
 
 void *PThreadSimTask(void *args) {
@@ -43,6 +52,22 @@ void *PThreadSimTask(void *args) {
 
 	// Loop for a few steps
 	for (size_t s = 0; s < tas->num_steps; s++) {
+
+#ifdef BH_ALGO
+		// Create a bh tree
+		if (tid == 0) {
+			if (tas->bh->tree != NULL)
+				delete tas->bh->tree;
+			tas->bh->tree = new BHTree(tas->uni);
+		}
+		pthread_barrier_wait(tas->barrier);
+
+		// Split the tree
+		while (tas->bh->tree->IsThereMoreJobs())
+			tas->bh->tree->DoASplittingJob();
+		pthread_barrier_wait(tas->barrier);
+#endif
+
 		// Calculate new velocities and positions
 		for (size_t i = 0; i < body_count; i++) {
 			if (i % thread_count == tid) {
@@ -57,16 +82,12 @@ void *PThreadSimTask(void *args) {
 				tmp[i].pos.y = bodies[i].pos.y + bodies[i].vel.y * dt;
 			}
 		}
-
-		// A thread Barrier
 		pthread_barrier_wait(tas->barrier);
 
 		// Update the states
 		for (size_t i = 0; i < body_count; i++)
 			if (i % thread_count == tid)
 				bodies[i] = tmp[i];
-
-		// Another thread Barrier
 		pthread_barrier_wait(tas->barrier);
 	}
 
@@ -81,8 +102,21 @@ void *PThreadGUITask(void *args) {
 
 	// Loop for a few steps
 	for (size_t s = 0; s < tgas->num_steps; s++) {
-		// Draw all bodies
+
+#ifdef BH_ALGO
+		pthread_barrier_wait(tgas->barrier);
+		pthread_barrier_wait(tgas->barrier);
+#endif
+
+		// Clean the window
 		gui->CleanAll();
+
+#ifdef BH_ALGO
+		// Draw all regions
+		tgas->bh->tree->DrawRegions(gui);
+#endif
+
+		// Draw all bodies
 		for (size_t i = 0; i < tgas->uni->num_bodies; i++) {
 			gui->DrawAPoint(bodies[i].pos.x, bodies[i].pos.y);
 		}
@@ -91,10 +125,7 @@ void *PThreadGUITask(void *args) {
 		// XXX: Maybe I can put this after barrier
 		gui->Flush();
 
-		// A thread Barrier
 		pthread_barrier_wait(tgas->barrier);
-
-		// Another thread Barrier
 		pthread_barrier_wait(tgas->barrier);
 	}
 }
@@ -107,6 +138,10 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 	else
 		pthread_barrier_init(&barrier, NULL, num_threads);
 
+	// Create a bh tree pack
+	BHTreePack *bh = new BHTreePack();
+	bh->tree = NULL;
+
 	// Create simulation threads
 	pthread_t *threads = new pthread_t[num_threads];
 	PThreadSimArgs *thread_args = new PThreadSimArgs[num_threads];
@@ -118,6 +153,7 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 		thread_args[id].uni = uni;
 		thread_args[id].delta_time = delta_time;
 		thread_args[id].num_steps = num_steps;
+		thread_args[id].bh = bh;
 		pthread_create(threads + id, NULL, PThreadSimTask, (void *) (thread_args + id));
 	}
 
@@ -129,6 +165,7 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 		gui_args.uni = uni;
 		gui_args.barrier = &barrier;
 		gui_args.num_steps = num_steps;
+		gui_args.bh = bh;
 		pthread_create(&gui_thread, NULL, PThreadGUITask, (void *) &gui_args);
 	}
 
@@ -142,6 +179,7 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 	pthread_barrier_destroy(&barrier);
 	delete[] threads;
 	delete[] thread_args;
+	delete bh;
 
 	// Exit by pthread
 	pthread_exit(NULL);

@@ -27,19 +27,12 @@ GUI::GUI(unsigned win_len, double coord_len, double x_min, double y_min) {
 	// Get the id of the default screen
 	screen_id_ = DefaultScreen(display_);
 
-	// Generate the color pixels we need
-	color_black_ = BlackPixel(display_, screen_id_);
-	color_white_ = WhitePixel(display_, screen_id_);
-
 	// Create a window
-	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, win_len_, win_len_, 0, color_black_, color_white_);
+	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, win_len_, win_len_, 0, kColorBlack, kColorWhite);
 
 	// Create a graphic context
 	XGCValues values;
 	gc_ = XCreateGC(display_, window_, 0, &values);
-	//XSetForeground(display, gc, color_black_);
-	//XSetBackground(display, gc, 0X0000FF00);
-	//XSetLineAttributes(display, gc, 1, LineSolid, CapRound, JoinRound);
 
 	// map(show) the window
 	XMapWindow(display_, window_);
@@ -51,13 +44,18 @@ GUI::~GUI() {
 
 void GUI::CleanAll() {
 	// Draw a rectangle to clean everything
-	XSetForeground(display_, gc_, color_black_);
+	XSetForeground(display_, gc_, kColorBlack);
 	XFillRectangle(display_, window_, gc_, 0, 0, win_len_, win_len_);
 }
 
-void GUI::DrawAPoint(double coord_x, double coord_y) {
-	XSetForeground(display_, gc_, color_white_);
-	XDrawPoint(display_, window_, gc_, (unsigned) ((coord_x - x_min_) * scale_), (unsigned)((coord_y - y_min_) * scale_));
+void GUI::DrawAPoint(double x, double y) {
+	XSetForeground(display_, gc_, kColorWhite);
+	XDrawPoint(display_, window_, gc_, MapX(x), MapY(y));
+}
+
+void GUI::DrawALine(double start_x, double start_y, double end_x, double end_y) {
+	XSetForeground(display_, gc_, kColorGray);
+	XDrawLine(display_, window_, gc_, MapX(start_x), MapY(start_y), MapX(end_x), MapY(end_y));
 }
 
 void GUI::Flush() {

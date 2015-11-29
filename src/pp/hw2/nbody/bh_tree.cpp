@@ -1,12 +1,14 @@
 #include "bh_tree.hpp"
 
+#include <cfloat>
 #include <cstdio>
 #include <vector>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 using std::vector;
-
+/*
 int main(int argc, char const *argv[]) {
 
 	pp::hw2::nbody::Universe *uni = pp::hw2::nbody::ReadFromFile("tree_test.txt");
@@ -20,6 +22,7 @@ int main(int argc, char const *argv[]) {
 
 	return 0;
 }
+*/
 
 namespace pp {
 namespace hw2 {
@@ -52,11 +55,26 @@ BHTreeNode::BHTreeNode(Universe *uni, int body_id, Vec2 min, Vec2 max) {
 	se_ = NULL;
 }
 
-BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
+BHTree::BHTree(Universe *uni) {
 	root_ = NULL;
 	uni_ = uni;
-	root_min_ = min;
-	root_max_ = max;
+
+	// Calculate the max and the min
+	root_min_.x = DBL_MAX;
+	root_min_.y = DBL_MAX;
+	root_max_.x = DBL_MIN;
+	root_max_.y = DBL_MIN;
+	CelestialBody *bodies = uni->bodies;
+	for (size_t i = 0; i < uni->num_bodies; i++) {
+		if (root_min_.x > bodies[i].pos.x)
+			root_min_.x = bodies[i].pos.x;
+		if (root_min_.y > bodies[i].pos.y)
+			root_min_.y = bodies[i].pos.y;
+		if (root_max_.x < bodies[i].pos.x)
+			root_max_.x = bodies[i].pos.x;
+		if (root_max_.y < bodies[i].pos.y)
+			root_max_.y = bodies[i].pos.y;
+	}
 
 	// Create the job queue
 	job_queue_ = new std::list<SplittingJob>();
@@ -69,10 +87,10 @@ BHTree::BHTree(Universe *uni, Vec2 min, Vec2 max) {
 	// XXX: Not consider the size = 0
 	if (uni->num_bodies == 1) {
 		// Create a external root node
-		root_ = new BHTreeNode(uni, 0, min, max);
+		root_ = new BHTreeNode(uni, 0, root_min_, root_max_);
 	} else {
 		// Create an internal root node then split it
-		root_ = new BHTreeNode(min, max);
+		root_ = new BHTreeNode(root_min_, root_max_);
 		vector<int> *body_ids = new vector<int>();
 		for (size_t i = 0; i < uni->num_bodies; i++)
 			body_ids->push_back(i);
@@ -136,15 +154,20 @@ void BHTree::SplitTheNode(BHTreeNode *parent, vector<int> *body_ids) {
 		tmp.y += bodies[id].pos.y;
 
 		// Put the body to a proper region
+		int pos = 0;
 		Vec2 body_pos = (uni_->bodies[id]).pos;
-		if (body_pos.x < mid.x && body_pos.y < mid.y) { // North-West
+		if (body_pos.x <= mid.x && body_pos.y <= mid.y) { // North-West
 			nw_bodies->push_back(id);
-		}else if (body_pos.x > mid.x && body_pos.y < mid.y) { // North-East
+			pos = 1;
+		}else if (body_pos.x >= mid.x && body_pos.y <= mid.y) { // North-East
 			ne_bodies->push_back(id);
-		}else if (body_pos.x < mid.x && body_pos.y > mid.y) { // South-West
+			pos = 2;
+		}else if (body_pos.x <= mid.x && body_pos.y >= mid.y) { // South-West
 			sw_bodies->push_back(id);
+			pos = 3;
 		}else { // South-East
 			se_bodies->push_back(id);
+			pos = 4;
 		}
 	}
 
@@ -191,6 +214,7 @@ void BHTree::SplitTheNode(BHTreeNode *parent, vector<int> *body_ids) {
 
 	// Finish a job, increment the finish job counter
 	finish_count_++;
+	//printf("Finish a job (bodies count: %u), job count: %u, finish count: %u\n", body_count, job_count_, finish_count_);
 
 	// Notify threads to retrieve the pending jobs
 	pthread_cond_broadcast(&job_queue_cond_);
@@ -202,6 +226,7 @@ void BHTree::InsertASplittingJob(BHTreeNode *parent, vector<int> *bodies) {
 	SplittingJob job = {parent, bodies};
 
 	pthread_mutex_lock(&job_queue_mutex_);
+
 	// Increment the job counter
 	job_count_++;
 
@@ -243,6 +268,37 @@ bool BHTree::IsThereMoreJobs() {
 	pthread_mutex_unlock(&job_queue_mutex_);
 
 	return result;
+}
+
+void BHTree::DrawRegions(GUI *gui) {
+	// Draw boundaries
+	gui->DrawALine(root_min_.x, root_min_.y, root_min_.x, root_max_.y);
+	gui->DrawALine(root_min_.x, root_max_.y, root_max_.x, root_max_.y);
+	gui->DrawALine(root_max_.x, root_max_.y, root_max_.x, root_min_.y);
+	gui->DrawALine(root_max_.x, root_min_.y, root_min_.x, root_min_.y);
+
+	DrawRegions(gui, root_);
+}
+
+void BHTree::DrawRegions(GUI *gui, BHTreeNode *node) {
+	// Draw the middle line of the current region
+	if (node->body_id_ == BHTreeNode::kInternalNode) {
+		Vec2 min = node->coord_min_;
+		Vec2 mid = node->coord_mid_;
+		Vec2 max = node->coord_max_;
+		gui->DrawALine(mid.x, min.y, mid.x, max.y);
+		gui->DrawALine(min.x, mid.y, max.x, mid.y);
+	}
+
+	// Go deeper
+	if (node->nw_ != NULL)
+		DrawRegions(gui, node->nw_);
+	if (node->ne_ != NULL)
+		DrawRegions(gui, node->ne_);
+	if (node->sw_ != NULL)
+		DrawRegions(gui, node->sw_);
+	if (node->se_ != NULL)
+		DrawRegions(gui, node->se_);
 }
 
 void BHTree::PrintInDFS() {

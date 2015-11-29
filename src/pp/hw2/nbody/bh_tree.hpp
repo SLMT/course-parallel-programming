@@ -6,6 +6,7 @@
 #include <pthread.h>
 
 #include "nbody.hpp"
+#include "gui.hpp"
 
 using std::vector;
 using std::list;
@@ -34,7 +35,7 @@ private:
 class BHTree {
 
 public:
-	BHTree(Universe *uni, Vec2 min, Vec2 max);
+	BHTree(Universe *uni);
 	~BHTree();
 
 	// For multi-threading
@@ -43,6 +44,10 @@ public:
 
 	// Free all resource
 	void Delete(BHTreeNode *parent);
+
+	// For drawing
+	void DrawRegions(GUI *gui);
+	void DrawRegions(GUI *gui, BHTreeNode *node);
 
 	// For debugging
 	void PrintInDFS();

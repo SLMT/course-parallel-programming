@@ -14,10 +14,19 @@ public:
 	~GUI();
 
 	void CleanAll();
-	void DrawAPoint(double coord_x, double coord_y);
+	void DrawAPoint(double x, double y);
+	void DrawALine(double start_x, double start_y, double end_x, double end_y);
 	void Flush();
 
 private:
+	inline unsigned MapX(double coord_x) {
+		return (unsigned) ((coord_x - x_min_) * scale_);
+	}
+
+	inline unsigned MapY(double coord_y) {
+		return (unsigned) ((coord_y - y_min_) * scale_);
+	}
+
 	// Some attributes
 	unsigned win_len_;
 	double scale_;
@@ -28,7 +37,8 @@ private:
 	Window window_;
 	GC gc_;
 	int screen_id_;
-	unsigned long color_white_, color_black_;
+
+	static const unsigned long kColorWhite = 0xFFFFFFL, kColorBlack = 0x000000L, kColorGray = 0x5F5F5FL;
 };
 
 } // namespace nbody
