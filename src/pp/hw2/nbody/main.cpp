@@ -2,15 +2,14 @@
 #include <cstdlib>
 #include <unistd.h>
 
-#include "../../timer.hpp"
 #include "nbody.hpp"
 #include "gui.hpp"
-
 #ifndef OMP
 	#include "nbody_pthread.hpp"
 #else
 	#include "nbody_omp.hpp"
 #endif
+#include "../../timer.hpp"
 
 using pp::hw2::nbody::Universe;
 using pp::hw2::nbody::ReadFromFile;
@@ -51,8 +50,13 @@ int main(int argc, char const *argv[]) {
 	pp::Time start = GetCurrentTime();
 
 	// Read the input file
+	pp::Time io_start = GetCurrentTime();
+
 	Universe *uni = ReadFromFile(filename);
 	uni->body_mass = mass;
+
+	pp::Time io_end = GetCurrentTime();
+	printf("IO took %ld ms.\n", TimeDiffInMs(io_start, io_end));
 
 	// Create a GUI for demonstration
 	GUI *gui = NULL;
