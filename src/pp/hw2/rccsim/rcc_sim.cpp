@@ -40,6 +40,8 @@ useconds_t GetRandomTime() {
 void *PassengerThread(void *args) {
 	PassengerThreadArgs *pta = (PassengerThreadArgs *) args;
 	bool keep_going = true;
+	Time start, end, total;
+	int play_count = 0;
 
 	printf("This is passenger thread no.%d\n", pta->passenger_id);
 
@@ -50,10 +52,18 @@ void *PassengerThread(void *args) {
 		usleep(walk_time * 1000);
 
 		// Wait for a ride
+		start = GetCurrentTime();
 		keep_going = !(pta->car->WaifForARide(pta->passenger_id));
+
+		if (keep_going) {
+			play_count++;
+			end = GetCurrentTime();
+			total = TimeAdd(total, TimeDiff(start, end));
+		}
 	}
 
-	printf("Passenger no.%d leaves.\n", pta->passenger_id);
+	long avg_wait = TimeToLongInMs(total) / play_count;
+	printf("Passenger no.%d leaves. (The avg. waiting time is %ld ms)\n", pta->passenger_id, avg_wait);
 }
 
 void *CarThread(void *args) {
