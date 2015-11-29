@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <unistd.h>
 
+#include "timer.hpp"
 #include "nbody.hpp"
 #include "gui.hpp"
 
