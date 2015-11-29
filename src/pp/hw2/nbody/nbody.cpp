@@ -1,32 +1,34 @@
 #include "nbody.hpp"
 
 #include <cstdio>
-#include <cmath>
 
 namespace pp {
 namespace hw2 {
 namespace nbody {
 
+Vec2 Add(Vec2 a, Vec2 b) {
+	Vec2 c;
+	c.x = a.x + b.x;
+	c.y = a.y + b.y;
+	return c;
+}
+
 Vec2 CalculateTotalForce(Universe *uni, int target) {
 	CelestialBody *bodies = uni->bodies;
 	double mass = uni->body_mass;
 	Vec2 total_force = {0.0, 0.0}, tmp;
-	double dis_x, dis_y, dis_total;
-	double force;
+	Vec2 dis;
 
 	// Force
 	for (size_t i = 0; i < uni->num_bodies; i++) {
 		if (i != target) {
 			// Calculate the distance
-			// XXX: The distance might need a minimun value
-			dis_x = bodies[i].pos.x - bodies[target].pos.x;
-			dis_y = bodies[i].pos.y - bodies[target].pos.y;
-			dis_total = sqrt(dis_x * dis_x + dis_y * dis_y);
+			dis.x = bodies[i].pos.x - bodies[target].pos.x;
+			dis.y = bodies[i].pos.y - bodies[target].pos.y;
 
 			// Calculate the force
-			force = (kG * mass * mass) / (dis_total * dis_total);
-			total_force.x += force * dis_x / dis_total;
-			total_force.y += force * dis_y / dis_total;
+			Vec2 force = GravitationFormula(mass, mass, dis);
+			total_force = Add(force, total_force);
 		}
 	}
 

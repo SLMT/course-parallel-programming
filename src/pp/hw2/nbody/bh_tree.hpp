@@ -38,9 +38,13 @@ public:
 	BHTree(Universe *uni);
 	~BHTree();
 
-	// For multi-threading
+	// For multi-threading splitting
 	void DoASplittingJob();
 	bool IsThereMoreJobs();
+
+	// Calculate force
+	Vec2 CalculateTotalForce(int source_id, double theta);
+	Vec2 CalculateTotalForce(int source_id, double theta, BHTreeNode *node);
 
 	// Free all resource
 	void Delete(BHTreeNode *parent);

@@ -28,6 +28,7 @@ typedef struct {
 
 	// BH-Tree
 	BHTreePack *bh;
+	double theta;
 } PThreadSimArgs;
 
 typedef struct {
@@ -71,7 +72,11 @@ void *PThreadSimTask(void *args) {
 		// Calculate new velocities and positions
 		for (size_t i = 0; i < body_count; i++) {
 			if (i % thread_count == tid) {
+#ifdef BH_ALGO
+				Vec2 total_force = tas->bh->tree->CalculateTotalForce(i, tas->theta);
+#else
 				Vec2 total_force = CalculateTotalForce(tas->uni, i);
+#endif
 
 				// New Velocity
 				tmp[i].vel.x = bodies[i].vel.x + total_force.x * dt / mass;
@@ -154,6 +159,7 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 		thread_args[id].delta_time = delta_time;
 		thread_args[id].num_steps = num_steps;
 		thread_args[id].bh = bh;
+		thread_args[id].theta = theta;
 		pthread_create(threads + id, NULL, PThreadSimTask, (void *) (thread_args + id));
 	}
 

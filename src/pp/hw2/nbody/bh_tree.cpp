@@ -2,27 +2,13 @@
 
 #include <cfloat>
 #include <cstdio>
+#include <cmath>
 #include <vector>
 
 #include "nbody.hpp"
 #include "gui.hpp"
 
 using std::vector;
-/*
-int main(int argc, char const *argv[]) {
-
-	pp::hw2::nbody::Universe *uni = pp::hw2::nbody::ReadFromFile("tree_test.txt");
-	uni->body_mass = 1.0;
-
-	pp::hw2::nbody::Vec2 min = {0.0, 0.0}, max = {100.0, 100.0};
-	pp::hw2::nbody::BHTree *tree = new pp::hw2::nbody::BHTree(uni, min, max);
-	while (tree->IsThereMoreJobs())
-		tree->DoASplittingJob();
-	tree->PrintInDFS();
-
-	return 0;
-}
-*/
 
 namespace pp {
 namespace hw2 {
@@ -214,7 +200,6 @@ void BHTree::SplitTheNode(BHTreeNode *parent, vector<int> *body_ids) {
 
 	// Finish a job, increment the finish job counter
 	finish_count_++;
-	//printf("Finish a job (bodies count: %u), job count: %u, finish count: %u\n", body_count, job_count_, finish_count_);
 
 	// Notify threads to retrieve the pending jobs
 	pthread_cond_broadcast(&job_queue_cond_);
@@ -268,6 +253,51 @@ bool BHTree::IsThereMoreJobs() {
 	pthread_mutex_unlock(&job_queue_mutex_);
 
 	return result;
+}
+
+Vec2 BHTree::CalculateTotalForce(int source_id, double theta) {
+	return CalculateTotalForce(source_id, theta, root_);
+}
+
+Vec2 BHTree::CalculateTotalForce(int source_id, double theta, BHTreeNode *node) {
+	Vec2 total_force = {0.0, 0.0}, dis;
+	double target_mass, dis_total;
+	CelestialBody *bodies = uni_->bodies;
+
+	// If this node is the source node
+	if (node->body_id_ == source_id) {
+		return total_force;
+	}
+	// For an ineternal node
+	else if (node->body_id_ == BHTreeNode::kInternalNode) {
+		dis.x = node->center_of_mass_.x - bodies[source_id].pos.x;
+		dis.y = node->center_of_mass_.y - bodies[source_id].pos.y;
+		dis_total = sqrt(dis.x * dis.x + dis.y * dis.y);
+		double region_width = node->coord_max_.x - node->coord_min_.x;
+
+		// Check if we need to go deeper
+		if (region_width / dis_total > theta) {
+			// Go deeper
+			if (node->nw_ != NULL)
+				total_force = Add(CalculateTotalForce(source_id, theta, node->nw_), total_force);
+			if (node->ne_ != NULL)
+				total_force = Add(CalculateTotalForce(source_id, theta, node->ne_), total_force);
+			if (node->sw_ != NULL)
+				total_force = Add(CalculateTotalForce(source_id, theta, node->sw_), total_force);
+			if (node->se_ != NULL)
+				total_force = Add(CalculateTotalForce(source_id, theta, node->se_), total_force);
+			return total_force;
+		}
+
+		target_mass = uni_->body_mass * node->body_count_;
+	} else { // For an external node
+		dis.x = bodies[node->body_id_].pos.x - bodies[source_id].pos.x;
+		dis.y = bodies[node->body_id_].pos.y - bodies[source_id].pos.y;
+		target_mass = uni_->body_mass;
+	}
+
+	// Apply the formula
+	return GravitationFormula(uni_->body_mass, target_mass, dis);
 }
 
 void BHTree::DrawRegions(GUI *gui) {
