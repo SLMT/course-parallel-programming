@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <unistd.h>
 
-#include "timer.hpp"
+#include "../../timer.hpp"
 #include "nbody.hpp"
 #include "gui.hpp"
 
@@ -16,7 +16,6 @@ using pp::hw2::nbody::Universe;
 using pp::hw2::nbody::ReadFromFile;
 using pp::hw2::nbody::NBodySim;
 using pp::hw2::nbody::GUI;
-using pp::Time;
 using pp::GetCurrentTime;
 using pp::TimeDiffInMs;
 
@@ -49,7 +48,7 @@ int main(int argc, char const *argv[]) {
 	win_len = (unsigned) strtol(argv[11], NULL, 10);
 
 	// Record the start time
-	Time start = GetCurrentTime();
+	pp::Time start = GetCurrentTime();
 
 	// Read the input file
 	Universe *uni = ReadFromFile(filename);
@@ -64,7 +63,7 @@ int main(int argc, char const *argv[]) {
 	NBodySim(uni, num_threads, delta_time, num_steps, theta, gui);
 
 	// Print the execution time
-	Time end = GetCurrentTime();
+	pp::Time end = GetCurrentTime();
 	printf("The whole program took %ld ms for execution.\n", TimeDiffInMs(start, end));
 
 	return 0;

@@ -5,7 +5,7 @@ CC = g++
 PTHREAD_EXEC = hw2_NB_pthread
 OMP_EXEC = hw2_NB_omp
 GH_EXEC = hw2_NB_BHalgo
-COMMON_OBJS = nbody.o gui.o bh_tree.o
+COMMON_OBJS = nbody.o gui.o bh_tree.o timer.o
 
 # Main target
 all: pthread omp gh
@@ -27,6 +27,9 @@ gh: $(COMMON_OBJS)
 
 # To obtain object files
 %.o: %.cpp
+	$(CC) -c $< -o $@
+
+timer.o: ../../timer.cpp
 	$(CC) -c $< -o $@
 
 # To clean all output files
