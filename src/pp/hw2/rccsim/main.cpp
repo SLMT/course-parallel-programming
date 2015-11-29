@@ -21,7 +21,7 @@ int main(int argc, char const *argv[]) {
 		return 0;
 	}
 
-	// Retrieve arguments
+	// Retrieve the arguments
 	int passenger_num = (int) strtol(argv[1], NULL, 10);
 	int car_capacity = (int) strtol(argv[2], NULL, 10);
 	int playing_time = (int) strtol(argv[3], NULL, 10);
