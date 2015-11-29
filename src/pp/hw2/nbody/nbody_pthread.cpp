@@ -186,9 +186,6 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 	delete[] threads;
 	delete[] thread_args;
 	delete bh;
-
-	// Exit by pthread
-	pthread_exit(NULL);
 }
 
 } // namespace nbody
