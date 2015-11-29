@@ -63,13 +63,19 @@ void *CarThread(void *args) {
 	char *tmp_str = new char[10];
 	char *list_str = new char[car_capacity * 15];
 	Time start, now;
+	Time wait_start, wait_end, total_wait;
+
 	start = GetCurrentTime();
+	total_wait = GetZeroTime();
 
 	printf("This is the car thread. Playing takes %d ms. It will run %d rounds.\n", cta->playing_time, cta->sim_steps_num);
 
 	for (size_t r = 0; r < cta->sim_steps_num; r++) {
 		// Check queue
+		wait_start = GetCurrentTime();
 		cta->car->WaitForCarFull(passenger_list);
+		wait_end = GetCurrentTime();
+		total_wait = TimeAdd(total_wait, TimeDiff(wait_start, wait_end));
 
 		// Construct string for logging
 		list_str[0] = 0; // Clear the string
@@ -98,6 +104,10 @@ void *CarThread(void *args) {
 			printf("The car thread closes the car.\n");
 		}
 	}
+
+	// Print the average waitting time
+	long avg_wait = TimeToLongInMs(total_wait) / cta->sim_steps_num;
+	printf("The average waitting time is %ld ms.\n", avg_wait);
 
 	delete[] passenger_list;
 	delete[] tmp_str;
