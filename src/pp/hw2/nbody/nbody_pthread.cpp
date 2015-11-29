@@ -6,6 +6,7 @@
 #include "nbody.hpp"
 #include "gui.hpp"
 #include "bh_tree.hpp"
+#include "../../timer.hpp"
 
 namespace pp {
 namespace hw2 {
@@ -47,6 +48,8 @@ void *PThreadSimTask(void *args) {
 	int mass = tas->uni->body_mass;
 	int thread_count = tas->num_threads;
 	int body_count = tas->uni->num_bodies;
+	Time build_start, build_end, build_total = GetZeroTime();
+	Time com_start, com_end, com_total = GetZeroTime();
 
 	// Allocate a buffer
 	CelestialBody *tmp = new CelestialBody[body_count];
@@ -57,6 +60,7 @@ void *PThreadSimTask(void *args) {
 #ifdef BH_ALGO
 		// Create a bh tree
 		if (tid == 0) {
+			build_start = GetCurrentTime();
 			if (tas->bh->tree != NULL)
 				delete tas->bh->tree;
 			tas->bh->tree = new BHTree(tas->uni);
@@ -67,6 +71,11 @@ void *PThreadSimTask(void *args) {
 		while (tas->bh->tree->IsThereMoreJobs())
 			tas->bh->tree->DoASplittingJob();
 		pthread_barrier_wait(tas->barrier);
+		if (tid == 0) {
+			build_end = GetCurrentTime();
+			build_total = TimeAdd(build_total, TimeDiff(build_start, build_end));
+			com_start = GetCurrentTime();
+		}
 #endif
 
 		// Calculate new velocities and positions
@@ -77,7 +86,6 @@ void *PThreadSimTask(void *args) {
 #else
 				Vec2 total_force = CalculateTotalForce(tas->uni, i);
 #endif
-
 				// New Velocity
 				tmp[i].vel.x = bodies[i].vel.x + total_force.x * dt / mass;
 				tmp[i].vel.y = bodies[i].vel.y + total_force.y * dt / mass;
@@ -94,6 +102,17 @@ void *PThreadSimTask(void *args) {
 			if (i % thread_count == tid)
 				bodies[i] = tmp[i];
 		pthread_barrier_wait(tas->barrier);
+
+		if (tid == 0) {
+			com_end = GetCurrentTime();
+			com_total = TimeAdd(com_total, TimeDiff(com_start, com_end));
+		}
+	}
+
+	// Print time
+	if (tid == 0) {
+		printf("Building took %ld ms.\n", TimeToLongInMs(build_total));
+		printf("Computing took %ld ms.\n", TimeToLongInMs(com_total));
 	}
 
 	// Deallocate the buffer
@@ -186,9 +205,6 @@ void NBodySim(Universe *uni, size_t num_threads, double delta_time, size_t num_s
 	delete[] threads;
 	delete[] thread_args;
 	delete bh;
-
-	// Exit by pthread
-	pthread_exit(NULL);
 }
 
 } // namespace nbody

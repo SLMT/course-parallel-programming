@@ -40,6 +40,8 @@ useconds_t GetRandomTime() {
 void *PassengerThread(void *args) {
 	PassengerThreadArgs *pta = (PassengerThreadArgs *) args;
 	bool keep_going = true;
+	Time start, end, total;
+	int play_count = 0;
 
 	printf("This is passenger thread no.%d\n", pta->passenger_id);
 
@@ -50,10 +52,18 @@ void *PassengerThread(void *args) {
 		usleep(walk_time * 1000);
 
 		// Wait for a ride
+		start = GetCurrentTime();
 		keep_going = !(pta->car->WaifForARide(pta->passenger_id));
+
+		if (keep_going) {
+			play_count++;
+			end = GetCurrentTime();
+			total = TimeAdd(total, TimeDiff(start, end));
+		}
 	}
 
-	printf("Passenger no.%d leaves.\n", pta->passenger_id);
+	long avg_wait = TimeToLongInMs(total) / play_count;
+	printf("Passenger no.%d leaves. (The avg. waiting time is %ld ms)\n", pta->passenger_id, avg_wait);
 }
 
 void *CarThread(void *args) {
@@ -63,13 +73,19 @@ void *CarThread(void *args) {
 	char *tmp_str = new char[10];
 	char *list_str = new char[car_capacity * 15];
 	Time start, now;
+	Time wait_start, wait_end, total_wait;
+
 	start = GetCurrentTime();
+	total_wait = GetZeroTime();
 
 	printf("This is the car thread. Playing takes %d ms. It will run %d rounds.\n", cta->playing_time, cta->sim_steps_num);
 
 	for (size_t r = 0; r < cta->sim_steps_num; r++) {
 		// Check queue
+		wait_start = GetCurrentTime();
 		cta->car->WaitForCarFull(passenger_list);
+		wait_end = GetCurrentTime();
+		total_wait = TimeAdd(total_wait, TimeDiff(wait_start, wait_end));
 
 		// Construct string for logging
 		list_str[0] = 0; // Clear the string
@@ -98,6 +114,10 @@ void *CarThread(void *args) {
 			printf("The car thread closes the car.\n");
 		}
 	}
+
+	// Print the average waitting time
+	long avg_wait = TimeToLongInMs(total_wait) / cta->sim_steps_num;
+	printf("The average waitting time is %ld ms.\n", avg_wait);
 
 	delete[] passenger_list;
 	delete[] tmp_str;

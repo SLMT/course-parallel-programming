@@ -4,17 +4,19 @@
 
 #include "nbody.hpp"
 #include "gui.hpp"
-
 #ifndef OMP
 	#include "nbody_pthread.hpp"
 #else
 	#include "nbody_omp.hpp"
 #endif
+#include "../../timer.hpp"
 
 using pp::hw2::nbody::Universe;
 using pp::hw2::nbody::ReadFromFile;
 using pp::hw2::nbody::NBodySim;
 using pp::hw2::nbody::GUI;
+using pp::GetCurrentTime;
+using pp::TimeDiffInMs;
 
 int main(int argc, char const *argv[]) {
 
@@ -44,9 +46,17 @@ int main(int argc, char const *argv[]) {
 	sscanf(argv[10], "%lf", &coord_len);
 	win_len = (unsigned) strtol(argv[11], NULL, 10);
 
+	// Record the start time
+	pp::Time start = GetCurrentTime();
+
 	// Read the input file
+	pp::Time io_start = GetCurrentTime();
+
 	Universe *uni = ReadFromFile(filename);
 	uni->body_mass = mass;
+
+	pp::Time io_end = GetCurrentTime();
+	printf("IO took %ld ms.\n", TimeDiffInMs(io_start, io_end));
 
 	// Create a GUI for demonstration
 	GUI *gui = NULL;
@@ -55,6 +65,10 @@ int main(int argc, char const *argv[]) {
 
 	// Start running
 	NBodySim(uni, num_threads, delta_time, num_steps, theta, gui);
+
+	// Print the execution time
+	pp::Time end = GetCurrentTime();
+	printf("The whole program took %ld ms for execution.\n", TimeDiffInMs(start, end));
 
 	return 0;
 }
