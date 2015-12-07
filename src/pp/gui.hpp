@@ -1,15 +1,14 @@
-#ifndef PP_HW2_NBODY_GUI_H_
-#define PP_HW2_NBODY_GUI_H_
+#ifndef PP_GUI_H_
+#define PP_GUI_H_
 
 #include <X11/Xlib.h>
 
 namespace pp {
-namespace hw2 {
-namespace nbody {
 
 class GUI {
 
 public:
+	GUI(unsigned win_width, unsigned win_height);
 	GUI(unsigned win_len, double coord_len, double x_min, double y_min);
 	~GUI();
 
@@ -19,17 +18,19 @@ public:
 	void Flush();
 
 private:
+	void InitXWindow();
+
 	inline unsigned MapX(double coord_x) {
-		return (unsigned) ((coord_x - x_min_) * scale_);
+		return (unsigned) ((coord_x - x_min_) * x_scale_);
 	}
 
 	inline unsigned MapY(double coord_y) {
-		return (unsigned) ((coord_y - y_min_) * scale_);
+		return (unsigned) ((coord_y - y_min_) * y_scale_);
 	}
 
 	// Some attributes
-	unsigned win_len_;
-	double scale_;
+	unsigned win_width_, win_height_;
+	double x_scale_, y_scale_;
 	double x_min_, y_min_;
 
 	// X-Window Componenets
@@ -41,9 +42,7 @@ private:
 	static const unsigned long kColorWhite = 0xFFFFFFL, kColorBlack = 0x000000L, kColorGray = 0x5F5F5FL;
 };
 
-} // namespace nbody
-} // namespace hw2
 } // namespace pp
 
 
-#endif  // PP_HW2_NBODY_GUI_H_
+#endif  // PP_GUI_H_

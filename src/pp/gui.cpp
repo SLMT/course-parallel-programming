@@ -7,16 +7,35 @@
 #include <X11/Xlib.h>
 
 namespace pp {
-namespace hw2 {
-namespace nbody {
+
+GUI::GUI(unsigned win_width, unsigned win_height) {
+	// Set the width and the height
+	win_width_ = win_width;
+	win_height_ = win_height;
+	x_scale_ = 1.0;
+	y_scale_ = 1.0;
+	x_min_ = 0;
+	y_min_ = 0;
+
+	InitXWindow();
+}
 
 GUI::GUI(unsigned win_len, double coord_len, double x_min, double y_min) {
 	// Set the width and the height
-	win_len_ = win_len;
-	scale_ = ((double) win_len_) / coord_len;
+	win_width_ = win_len;
+	win_height_ = win_len;
+	x_scale_ = ((double) win_len) / coord_len;
+	y_scale_ = x_scale_;
 	x_min_ = x_min;
 	y_min_ = y_min;
 
+	InitXWindow();
+}
+
+GUI::~GUI() {
+}
+
+void GUI::InitXWindow() {
 	// Open a connection to the x-window server
 	display_ = XOpenDisplay(NULL);
 	if(display_ == NULL) {
@@ -28,7 +47,7 @@ GUI::GUI(unsigned win_len, double coord_len, double x_min, double y_min) {
 	screen_id_ = DefaultScreen(display_);
 
 	// Create a window
-	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, win_len_, win_len_, 0, kColorBlack, kColorWhite);
+	window_ = XCreateSimpleWindow(display_, RootWindow(display_, screen_id_), 0, 0, win_width_, win_height_, 0, kColorBlack, kColorWhite);
 
 	// Create a graphic context
 	XGCValues values;
@@ -39,13 +58,10 @@ GUI::GUI(unsigned win_len, double coord_len, double x_min, double y_min) {
 	XSync(display_, 0);
 }
 
-GUI::~GUI() {
-}
-
 void GUI::CleanAll() {
 	// Draw a rectangle to clean everything
 	XSetForeground(display_, gc_, kColorBlack);
-	XFillRectangle(display_, window_, gc_, 0, 0, win_len_, win_len_);
+	XFillRectangle(display_, window_, gc_, 0, 0, win_width_, win_height_);
 }
 
 void GUI::DrawAPoint(double x, double y) {
@@ -62,6 +78,4 @@ void GUI::Flush() {
 	XFlush(display_);
 }
 
-} // namespace nbody
-} // namespace hw2
 } // namespace pp

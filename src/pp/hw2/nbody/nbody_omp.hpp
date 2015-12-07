@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "nbody.hpp"
-#include "gui.hpp"
+#include "../../gui.hpp"
 
 namespace pp {
 namespace hw2 {

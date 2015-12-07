@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 #include "nbody.hpp"
-#include "gui.hpp"
+#include "../../gui.hpp"
 
 using std::vector;
 using std::list;
