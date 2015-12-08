@@ -24,7 +24,7 @@ void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, 
 #else
 	#pragma omp parallel for default(shared) private(x, y, c, color) schedule(dynamic, 10)
 #endif
-		for (unsigned x = 0; x < num_threads; x++) {
+		for (unsigned x = 0; x < num_x_points; x++) {
 			for (unsigned y = 0; y < num_y_points; y++) {
 				// Map to a complex number
 				c.real = x / x_scale + real_min;
@@ -41,12 +41,14 @@ void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, 
 
 	// Draw on the GUI
 	if (gui != NULL) {
-		for (unsigned x = 0; x < num_threads; x++) {
+		for (unsigned x = 0; x < num_x_points; x++) {
 			for (unsigned y = 0; y < num_y_points; y++) {
 				gui->DrawAPoint(x, y, colors[x * num_y_points + y]);
 			}
 		}
 	}
+
+	delete[] colors;
 }
 
 } // namespace hw3

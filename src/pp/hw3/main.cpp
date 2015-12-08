@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <mpi.h>
 
 #include "mandelbort_set.hpp"
 #include "../gui.hpp"
@@ -33,7 +34,17 @@ int main(int argc, char const *argv[]) {
 		gui = new GUI(num_x_points, num_y_points);
 
 	// Parallel Mandelbort Set Calculation
+#ifdef OMP
 	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, gui);
+#else
+	// Init MPI
+	MPI_Init(&argc, &argv);
+
+	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, gui);
+
+	// Finalize MPI
+	MPI_Finalize();
+#endif
 
     return 0;
 }

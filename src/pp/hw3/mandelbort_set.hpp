@@ -10,7 +10,7 @@ typedef struct {
 	double real, imag;
 } Complex;
 
-unsigned kMaxIteration = 255;
+const unsigned kMaxIteration = 255;
 unsigned MandelbortSetCheck(Complex c);
 
 void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, GUI *gui);
