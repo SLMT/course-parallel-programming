@@ -14,6 +14,7 @@ public:
 
 	void CleanAll();
 	void DrawAPoint(double x, double y);
+	void DrawAPoint(double x, double y, unsigned long color);
 	void DrawALine(double start_x, double start_y, double end_x, double end_y);
 	void Flush();
 

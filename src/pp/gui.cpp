@@ -65,7 +65,11 @@ void GUI::CleanAll() {
 }
 
 void GUI::DrawAPoint(double x, double y) {
-	XSetForeground(display_, gc_, kColorWhite);
+	DrawAPoint(x, y, kColorWhite);
+}
+
+void GUI::DrawAPoint(double x, double y, unsigned long color) {
+	XSetForeground(display_, gc_, color);
 	XDrawPoint(display_, window_, gc_, MapX(x), MapY(y));
 }
 

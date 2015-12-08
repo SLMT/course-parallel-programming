@@ -3,7 +3,7 @@
 namespace pp {
 namespace hw3 {
 
-int MandelbortSetCheck(Complex c) {
+unsigned MandelbortSetCheck(Complex c) {
 	double sq_len;
 	Complex z, next_z;
 
@@ -11,7 +11,7 @@ int MandelbortSetCheck(Complex c) {
 	z = c;
 
 	// Mandelbort Set Check
-	for (int iter_count = 0; iter_count < kMaxIteration; iter_count++) {
+	for (unsigned iter_count = 0; iter_count < kMaxIteration; iter_count++) {
 		// Check if the length is in the bound
 		sq_len = z.real * z.real + z.imag * z.imag;
 		if (sq_len > 4.0)
