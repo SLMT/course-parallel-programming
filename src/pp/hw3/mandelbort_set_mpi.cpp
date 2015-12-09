@@ -6,10 +6,6 @@ namespace hw3 {
 const int kMPIRoot = 0;
 
 void StaticSchedule(ColorHex *colors, int num_rows, int num_colunms, double real_min, double real_max, double imag_min, double imag_max, int proc_count, int rank) {
-	// For coordination transform
-	double x_scale = num_x_points / (real_max - real_min);
-	double y_scale = num_y_points / (imag_max - imag_max);
-
 	// Calculate # of rows for each process
 	int rows_per_proc = num_rows / proc_count;
 	int left = num_rows % proc_count;
@@ -34,6 +30,10 @@ void StaticSchedule(ColorHex *colors, int num_rows, int num_colunms, double real
 
 	// Create a local buffer for each process
 	ColorHex *results = new ColorHex[buffer_counts[rank]];
+
+	// For coordination transform
+	double x_scale = num_x_points / (real_max - real_min);
+	double y_scale = num_y_points / (imag_max - imag_max);
 
 	// Calculate
 	Comp c;
@@ -64,6 +64,28 @@ void StaticSchedule(ColorHex *colors, int num_rows, int num_colunms, double real
 	delete[] results;
 }
 
+void DynamicSchedule(ColorHex *colors, int num_rows, int num_colunms, double real_min, double real_max, double imag_min, double imag_max, int proc_count, int rank) {
+	// TODO: Master
+		// TODO: Wait for a job request or a more job request
+			// If it is a job request
+				// TODO: Find a new job and send it
+			// If it is a more job request
+				// TODO: Copy to the global buffer
+				// TODO: Find a new job and send it
+		// TODO: Loop back and wait
+		// TODO: When there is no job, start sending terminal flag to each process
+
+	// TODO: Slaves
+		// TODO: Send a request
+		// TODO: Receive a job
+		// TODO: Calculation
+		// TODO: Send a more job request
+			// If it's a job
+				// TODO: Go back
+			// If it is a terminal flag
+				// Return
+}
+
 void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, GUI *gui) {
 	// Get MPI Info
 	int proc_count, rank;
@@ -79,7 +101,8 @@ void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, 
 	// Static schedule
 	StaticSchedule(colors, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, proc_count, rank);
 #else
-	// TODO: Dynamic schedule
+	// Dynamic schedule
+	DynamicSchedule(colors, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, proc_count, rank);
 #endif
 
 	// Draw on the GUI by the first process
