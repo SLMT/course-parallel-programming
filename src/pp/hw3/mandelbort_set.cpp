@@ -3,15 +3,15 @@
 namespace pp {
 namespace hw3 {
 
-unsigned MandelbortSetCheck(Complex c) {
+unsigned MandelbortSetCheck(Comp c) {
 	double sq_len;
-	Complex z, next_z;
+	Comp z, next_z;
 
 	// Set Z0
 	z = c;
 
 	// Mandelbort Set Check
-	for (unsigned iter_count = 0; iter_count < kMaxIteration; iter_count++) {
+	for (unsigned iter_count = 1; iter_count < kMaxIteration; iter_count++) {
 		// Check if the length is in the bound
 		sq_len = z.real * z.real + z.imag * z.imag;
 		if (sq_len > 4.0)

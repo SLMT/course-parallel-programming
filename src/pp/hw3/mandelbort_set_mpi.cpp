@@ -36,7 +36,7 @@ void StaticSchedule(ColorHex *colors, int num_rows, int num_colunms, double real
 	ColorHex *results = new ColorHex[buffer_counts[rank]];
 
 	// Calculate
-	Complex c;
+	Comp c;
 	ColorHex color;
 	for (unsigned rx = start_xs[rank], lx = 0; rx < start_xs[rank] + row_counts[rank]; rx++, lx++) {
 		for (unsigned y = 0; y < num_colunms; y++) {

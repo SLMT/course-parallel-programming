@@ -1,4 +1,4 @@
- /* 
+ /*
    Sequential Mandelbort sort
  */
 
@@ -14,9 +14,9 @@ int main(void)
 {
 	Display *display;
 	Window window;      //initialization for a window
-	int screen;         //which screen 
+	int screen;         //which screen
 
-	/* open connection with the server */ 
+	/* open connection with the server */
 	display = XOpenDisplay(NULL);
 	if(display == NULL) {
 		fprintf(stderr, "cannot open display\n");
@@ -39,22 +39,22 @@ int main(void)
 	/* create window */
 	window = XCreateSimpleWindow(display, RootWindow(display, screen), x, y, width, height, border_width,
 					BlackPixel(display, screen), WhitePixel(display, screen));
-	
+
 	/* create graph */
 	GC gc;
 	XGCValues values;
 	long valuemask = 0;
-	
+
 	gc = XCreateGC(display, window, valuemask, &values);
 	//XSetBackground (display, gc, WhitePixel (display, screen));
 	XSetForeground (display, gc, BlackPixel (display, screen));
 	XSetBackground(display, gc, 0X0000FF00);
 	XSetLineAttributes (display, gc, 1, LineSolid, CapRound, JoinRound);
-	
+
 	/* map(show) the window */
 	XMapWindow(display, window);
 	XSync(display, 0);
-	
+
 	/* draw points */
 	Compl z, c;
 	int repeats;
@@ -73,15 +73,15 @@ int main(void)
 				temp = z.real*z.real - z.imag*z.imag + c.real;
 				z.imag = 2*z.real*z.imag + c.imag;
 				z.real = temp;
-				lengthsq = z.real*z.real + z.imag*z.imag; 
+				lengthsq = z.real*z.real + z.imag*z.imag;
 				repeats++;
 			}
 
-			XSetForeground (display, gc,  1024 * 1024 * (repeats % 256));		
+			XSetForeground (display, gc,  1024 * 1024 * (repeats % 256));
 			XDrawPoint (display, window, gc, i, j);
 		}
 	}
 	XFlush(display);
-	sleep(5);
+	sleep(20);
 	return 0;
 }

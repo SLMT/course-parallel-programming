@@ -1,10 +1,15 @@
 #include <cstdio>
-#include <mpi.h>
+#include <unistd.h>
+
+#ifndef OMP
+	#include <mpi.h>
+#endif
 
 #include "mandelbort_set.hpp"
 #include "../gui.hpp"
 
 using pp::GUI;
+using pp::hw3::ParallelMSCalculation;
 
 int main(int argc, char const *argv[]) {
     // Check arguments
@@ -45,6 +50,11 @@ int main(int argc, char const *argv[]) {
 	// Finalize MPI
 	MPI_Finalize();
 #endif
+
+	if (x_enabled) {
+		gui->Flush();
+		sleep(20);
+	}
 
     return 0;
 }

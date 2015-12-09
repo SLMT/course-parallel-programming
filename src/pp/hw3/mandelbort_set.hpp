@@ -8,10 +8,10 @@ namespace hw3 {
 
 typedef struct {
 	double real, imag;
-} Complex;
+} Comp;
 
-const unsigned kMaxIteration = 255;
-unsigned MandelbortSetCheck(Complex c);
+const unsigned kMaxIteration = 100000;
+unsigned MandelbortSetCheck(Comp c);
 
 void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, GUI *gui);
 
