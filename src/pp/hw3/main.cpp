@@ -1,21 +1,18 @@
 #include <cstdio>
-#include <unistd.h>
 
 #ifndef OMP
 	#include <mpi.h>
 #endif
 
 #include "mandelbort_set.hpp"
-#include "../gui.hpp"
 
-using pp::GUI;
 using pp::hw3::ParallelMSCalculation;
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
     // Check arguments
 	if (argc < 9) {
 		fprintf(stderr, "Insufficient args\n");
-		fprintf(stderr, "Usage: %s #threads real-min real-max imag-min imag-max #x-points #y-points enable/disable", argv[0]);
+		fprintf(stderr, "Usage: %s #threads real-min real-max imag-min imag-max #x-points #y-points enable/disable\n", argv[0]);
 		return 0;
 	}
 
@@ -33,28 +30,18 @@ int main(int argc, char const *argv[]) {
     sscanf(argv[7], "%d", &num_y_points);
     x_enabled = (argv[8][0] == 'e')? true : false;
 
-	// Create a GUI for demonstration
-	GUI *gui = NULL;
-	if (x_enabled)
-		gui = new GUI(num_x_points, num_y_points);
-
 	// Parallel Mandelbort Set Calculation
 #ifdef OMP
-	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, gui);
+	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
 #else
 	// Init MPI
 	MPI_Init(&argc, &argv);
 
-	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, gui);
+	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
 
 	// Finalize MPI
 	MPI_Finalize();
 #endif
-
-	if (x_enabled) {
-		gui->Flush();
-		sleep(20);
-	}
 
     return 0;
 }

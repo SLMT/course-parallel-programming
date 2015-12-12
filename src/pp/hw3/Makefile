@@ -1,6 +1,6 @@
 # Declaration of variables
 CC = g++
-MPI_CC = mpi++
+MPI_CC = mpic++
 
 # File names
 OMP_STATIC_EXEC = MS_OpenMP_static
@@ -9,10 +9,10 @@ MPI_STATIC_EXEC = MS_MPI_static
 MPI_DYNAMIC_EXEC = MS_MPI_dynamic
 HYBRID_STATIC_EXEC = MS_Hybrid_static
 HYBRID_DYNAMIC_EXEC = MS_Hybrid_dynamic
-COMMON_OBJS = mandelbort_set.o gui.o
+COMMON_OBJS = mandelbort_set.o gui.o timer.o
 
 # Main target
-all: omp_static omp_dynamic mpi_static
+all: omp_static omp_dynamic mpi_static mpi_dynamic hy_static hy_dynamic
 
 omp_static: $(COMMON_OBJS)
 	$(CC) -c -fopenmp mandelbort_set_openmp.cpp -o mandelbort_set_openmp.o
@@ -28,6 +28,16 @@ mpi_static: $(COMMON_OBJS)
 	$(MPI_CC) -c mandelbort_set_mpi.cpp -o mandelbort_set_mpi.o
 	$(MPI_CC) -c main.cpp -o main.o
 	$(MPI_CC) -lX11 $(COMMON_OBJS) mandelbort_set_mpi.o main.o -o $(MPI_STATIC_EXEC)
+
+mpi_dynamic: $(COMMON_OBJS)
+	$(MPI_CC) -c -D DYNAMIC mandelbort_set_mpi.cpp -o mandelbort_set_mpi.o
+	$(MPI_CC) -c main.cpp -o main.o
+	$(MPI_CC) -lX11 $(COMMON_OBJS) mandelbort_set_mpi.o main.o -o $(MPI_DYNAMIC_EXEC)
+
+hy_static: $(COMMON_OBJS)
+
+hy_dynamic: $(COMMON_OBJS)
+
 
 # To obtain object files
 %.o: %.cpp
