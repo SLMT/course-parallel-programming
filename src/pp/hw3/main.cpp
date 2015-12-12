@@ -6,7 +6,7 @@
 
 #include "mandelbort_set.hpp"
 
-using pp::hw3::ParallelMSCalculation;
+using pp::hw3::MSMain;
 
 int main(int argc, char *argv[]) {
     // Check arguments
@@ -32,12 +32,12 @@ int main(int argc, char *argv[]) {
 
 	// Parallel Mandelbort Set Calculation
 #ifdef OMP
-	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
+	MSMain(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
 #else
 	// Init MPI
 	MPI_Init(&argc, &argv);
 
-	ParallelMSCalculation(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
+	MSMain(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, x_enabled);
 
 	// Finalize MPI
 	MPI_Finalize();

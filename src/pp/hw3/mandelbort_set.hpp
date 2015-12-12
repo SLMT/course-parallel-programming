@@ -10,12 +10,15 @@ typedef struct {
 	double real, imag;
 } Comp;
 
+typedef unsigned long ColorHex;
+
 const unsigned kMaxIteration = 100000;
 unsigned MandelbortSetCheck(Comp c);
 
-void ParallelMSCalculation(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, bool x_enabled);
+void SeqMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, double x_scale, double y_scale, double x_min, double y_min, ColorHex *results);
+void OmpMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, double x_scale, double y_scale, double x_min, double y_min, ColorHex *results);
 
-typedef unsigned long ColorHex;
+void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, bool x_enabled);
 
 } // namespace hw3
 } // namespace pp
