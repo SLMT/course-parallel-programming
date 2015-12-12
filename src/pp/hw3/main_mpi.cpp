@@ -22,6 +22,23 @@ void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min
 		colors = new ColorHex[num_x_points * num_y_points];
 	}
 
+	// Welcome message
+	if (rank == kMPIRoot) {
+#ifndef HYBRID
+	#ifndef DYNAMIC
+		printf("== Mandelbort Set MPI Static Version ==\n");
+	#else
+		printf("== Mandelbort Set MPI Dynamic Version ==\n");
+	#endif
+#else
+	#ifndef DYNAMIC
+		printf("== Mandelbort Set Hybrid Static Version ==\n");
+	#else
+		printf("== Mandelbort Set Hybrid Dynamic Version ==\n");
+	#endif
+#endif
+	}
+
 #ifndef DYNAMIC
 	// Static schedule
 	StaticSchedule(colors, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, proc_count, rank);

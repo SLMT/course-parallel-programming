@@ -58,7 +58,7 @@ void OmpMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, do
 	Time tstart, tend;
 	int count;
 
-	#pragma omp parallel default(shared) private(c, color, x, y, tstart, tend)
+	#pragma omp parallel default(shared) private(c, color, x, y, tstart, tend, count)
 	{
 		count = 0;
 		tstart = GetCurrentTime();

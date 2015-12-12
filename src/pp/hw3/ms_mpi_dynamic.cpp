@@ -88,7 +88,11 @@ void DynamicScheduleSlave(int num_rows, int num_colunms, double real_min, double
 		count = (start + kRowCountInJob > num_rows)? num_rows - start : kRowCountInJob;
 
 		// Calculate
+#ifndef HYBRID
 		SeqMSCalculation(start, count, num_colunms, x_scale, y_scale, real_min, imag_min, buffer);
+#else
+		OmpMSCalculation(start, count, num_colunms, x_scale, y_scale, real_min, imag_min, buffer);
+#endif
 
 		// Request more jobs
 		MPI_Send(buffer, count * num_colunms, MPI_UNSIGNED_LONG, kMPIRoot, kTagJobReturnAndRequest, MPI_COMM_WORLD);

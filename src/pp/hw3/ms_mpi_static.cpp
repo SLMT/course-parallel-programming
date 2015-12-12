@@ -38,7 +38,11 @@ void StaticSchedule(ColorHex *colors, int num_rows, int num_colunms, double real
 	double y_scale = num_colunms / (imag_max - imag_min);
 
 	// Calculate
+#ifndef HYBRID
 	SeqMSCalculation(start_xs[rank], row_counts[rank], num_colunms, x_scale, y_scale, real_min, imag_min, results);
+#else
+	OmpMSCalculation(start_xs[rank], row_counts[rank], num_colunms, x_scale, y_scale, real_min, imag_min, results);
+#endif
 
 	// The first process collect the results
 	MPI_Gatherv(results, row_counts[rank] * num_colunms, MPI_UNSIGNED_LONG,

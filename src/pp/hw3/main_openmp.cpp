@@ -11,6 +11,13 @@ namespace pp {
 namespace hw3 {
 
 void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min, double real_max, double imag_min, double imag_max, bool x_enabled) {
+	// Welcome message
+#ifndef DYNAMIC
+	printf("== Mandelbort Set OpenMP Static Version ==\n");
+#else
+	printf("== Mandelbort Set OpenMP Dynamic Version ==\n");
+#endif
+
 	// For coordination transform
 	double x_scale = num_x_points / (real_max - real_min);
 	double y_scale = num_y_points / (imag_max - imag_min);
