@@ -12,6 +12,8 @@ Some programs require extra dependencies during linking. I concluded the depende
 | HW 2 - N-body Problem - Pthread Implementation | pthread, X-Window |
 | HW 2 - N-body Problem - OpenMP Implementation | X-Window |
 | HW 2 - N-body Problem - BH-Algo Implementation | pthread, X-Window |
+| HW 3 - OpenMP Implementation | X-Window |
+| HW 3 - MPI, Hybrid Implementation | MPI, X-Window |
 
 ## Compile
 
@@ -27,3 +29,10 @@ If you just want to compile the homeworks you need, please refer to the followin
 | HW 2 - N-body Problem - Pthread Implementation | `make hw2_nbody_pthread` |
 | HW 2 - N-body Problem - OpenMP Implementation | `make hw2_nbody_omp` |
 | HW 2 - N-body Problem - BH-Algo Implementation | `make hw2_nbody_gh` |
+| Entire Homework 3 | `make hw3` |
+| HW 3 - OpenMP - Static Scheduling Implementation | `make hw3_omp_static` |
+| HW 3 - OpenMP - Dynamic Scheduling Implementation | `make hw3_omp_dynamic` |
+| HW 3 - MPI - Static Scheduling Implementation | `make hw3_mpi_static` |
+| HW 3 - MPI - Dynamic Scheduling Implementation | `make hw3_mpi_dynamic` |
+| HW 3 - Hybrid - Static Scheduling Implementation | `make hw3_hybrid_static` |
+| HW 3 - Hybrid - Dynamic Scheduling Implementation | `make hw3_hybrid_dynamic` |
