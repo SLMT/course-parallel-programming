@@ -4,8 +4,8 @@
 #include <pthread.h>
 
 #include "nbody.hpp"
-#include "gui.hpp"
 #include "bh_tree.hpp"
+#include "../../gui.hpp"
 #include "../../timer.hpp"
 
 namespace pp {

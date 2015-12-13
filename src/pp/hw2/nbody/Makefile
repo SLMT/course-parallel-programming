@@ -29,6 +29,9 @@ gh: $(COMMON_OBJS)
 %.o: %.cpp
 	$(CC) -c $< -o $@
 
+gui.o: ../../gui.cpp
+	$(CC) -c $< -o $@
+
 timer.o: ../../timer.cpp
 	$(CC) -c $< -o $@
 

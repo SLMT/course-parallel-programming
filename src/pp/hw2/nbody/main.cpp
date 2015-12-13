@@ -3,7 +3,7 @@
 #include <unistd.h>
 
 #include "nbody.hpp"
-#include "gui.hpp"
+#include "../../gui.hpp"
 #ifndef OMP
 	#include "nbody_pthread.hpp"
 #else
@@ -14,7 +14,7 @@
 using pp::hw2::nbody::Universe;
 using pp::hw2::nbody::ReadFromFile;
 using pp::hw2::nbody::NBodySim;
-using pp::hw2::nbody::GUI;
+using pp::GUI;
 using pp::GetCurrentTime;
 using pp::TimeDiffInMs;
 

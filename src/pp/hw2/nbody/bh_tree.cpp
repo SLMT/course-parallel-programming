@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "nbody.hpp"
-#include "gui.hpp"
+#include "../../gui.hpp"
 
 using std::vector;
 
