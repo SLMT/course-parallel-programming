@@ -3,9 +3,11 @@
 
 #include <cstdio>
 #include <unistd.h>
+#include <omp.h>
 
 #include "mandelbort_set.hpp"
 #include "ms_mpi.hpp"
+#include "../timer.hpp"
 
 namespace pp {
 namespace hw3 {
@@ -39,17 +41,32 @@ void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min
 #endif
 	}
 
+	// Set the number of threads for OpenMP
+#ifdef HYBRID
+	omp_set_num_threads(num_threads);
+#endif
+
+	// Record the start time
+	Time start = GetCurrentTime();
+
 #ifndef DYNAMIC
 	// Static schedule
-	StaticSchedule(colors, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, proc_count, rank);
+	StaticSchedule(num_threads, colors, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, proc_count, rank);
 #else
 	// Dynamic schedule
 	if (rank == kMPIRoot) {
 		DynamicScheduleMaster(colors, num_x_points, num_y_points, proc_count);
 	} else {
-		DynamicScheduleSlave(num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, rank);
+		DynamicScheduleSlave(num_threads, num_x_points, num_y_points, real_min, real_max, imag_min, imag_max, rank);
 	}
 #endif
+
+	// Print the execution time
+	MPI_Barrier(MPI_COMM_WORLD);
+	Time end = GetCurrentTime();
+	if (rank == kMPIRoot) {
+		printf("It took %ld ms for calculation.\n", TimeDiffInMs(start, end));
+	}
 
 	// Draw on the GUI by the first process
 	if (x_enabled && rank == kMPIRoot) {

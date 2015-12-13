@@ -51,7 +51,7 @@ void SeqMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, do
 	}
 }
 
-void OmpMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, double x_scale, double y_scale, double x_min, double y_min, ColorHex *results) {
+void OmpMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, double x_scale, double y_scale, double x_min, double y_min, ColorHex *results, Time *exe_time, int *cal_rows) {
 	Comp c;
 	ColorHex color;
 	unsigned x, y;
@@ -85,7 +85,9 @@ void OmpMSCalculation(unsigned x_start, unsigned num_rows, unsigned num_cols, do
 			tend = GetCurrentTime();
 		}
 
-		printf("Thread no.%d took %d ms to calculate %d rows (%d points).\n", omp_get_thread_num(), TimeDiffInMs(tstart, tend), count, count * num_cols);
+		// For experiments
+		exe_time[omp_get_thread_num()] = TimeAdd(exe_time[omp_get_thread_num()], TimeDiff(tstart, tend));
+		cal_rows[omp_get_thread_num()] += count;
 	}
 }
 

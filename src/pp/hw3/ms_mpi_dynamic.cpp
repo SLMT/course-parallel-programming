@@ -5,6 +5,7 @@
 
 #include "ms_mpi.hpp"
 #include "mandelbort_set.hpp"
+#include "../timer.hpp"
 
 namespace pp {
 namespace hw3 {
@@ -69,7 +70,7 @@ void DynamicScheduleMaster(ColorHex *colors, int num_rows, int num_colunms, int 
 
 // ColorHex *colors, int num_rows, int num_colunms, double real_min, double real_max, double imag_min, double imag_max, int proc_count, int rank
 
-void DynamicScheduleSlave(int num_rows, int num_colunms, double real_min, double real_max, double imag_min, double imag_max, int rank) {
+void DynamicScheduleSlave(int num_threads, int num_rows, int num_colunms, double real_min, double real_max, double imag_min, double imag_max, int rank) {
 	// Allocate a receive buffer
 	unsigned buffer_size = kRowCountInJob * num_colunms;
 	ColorHex *buffer = new ColorHex[kRowCountInJob * num_colunms];
@@ -80,24 +81,50 @@ void DynamicScheduleSlave(int num_rows, int num_colunms, double real_min, double
 	double x_scale = num_rows / (real_max - real_min);
 	double y_scale = num_colunms / (imag_max - imag_min);
 
+	// Record the start time
+	Time ts = GetCurrentTime();
+	int total_rows = 0;
+#ifdef HYBRID
+	Time *th_exe_time = new Time[num_threads];
+	int *th_row_counts = new int[num_threads];
+	for (unsigned i = 0; i < num_threads; i++) {
+		th_exe_time[i] = GetZeroTime();
+		th_row_counts[i] = 0;
+	}
+#endif
+
 	// Send a job request
 	MPI_Send(NULL, 0, MPI_UNSIGNED_LONG, kMPIRoot, kTagJobRequest, MPI_COMM_WORLD);
 	MPI_Recv(&start, 1, MPI_INT, kMPIRoot, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
 	while (status.MPI_TAG == kTagNewJob) {
 		count = (start + kRowCountInJob > num_rows)? num_rows - start : kRowCountInJob;
+		total_rows += count;
 
 		// Calculate
 #ifndef HYBRID
 		SeqMSCalculation(start, count, num_colunms, x_scale, y_scale, real_min, imag_min, buffer);
 #else
-		OmpMSCalculation(start, count, num_colunms, x_scale, y_scale, real_min, imag_min, buffer);
+		OmpMSCalculation(start, count, num_colunms, x_scale, y_scale, real_min, imag_min, buffer, th_exe_time, th_row_counts);
 #endif
 
 		// Request more jobs
 		MPI_Send(buffer, count * num_colunms, MPI_UNSIGNED_LONG, kMPIRoot, kTagJobReturnAndRequest, MPI_COMM_WORLD);
 		MPI_Recv(&start, 1, MPI_INT, kMPIRoot, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 	}
+
+	// Print the execution time
+#ifdef HYBRID
+	for (unsigned i = 0; i < num_threads; i++) {
+		printf("Process %d, thread %d took %ld ms to calculate %d rows (%d points).\n", rank, i, TimeToLongInMs(th_exe_time[i]), th_row_counts[i], th_row_counts[i] * num_colunms);
+	}
+
+	delete[] th_exe_time;
+	delete[] th_row_counts;
+#endif
+
+	Time te = GetCurrentTime();
+	printf("Process %d took %ld ms to calculate %d rows (%d points).\n", rank, TimeDiffInMs(ts, te), total_rows, total_rows * num_colunms);
 
 	// Free the resource
 	delete[] buffer;

@@ -22,15 +22,21 @@ void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min
 	double x_scale = num_x_points / (real_max - real_min);
 	double y_scale = num_y_points / (imag_max - imag_min);
 
-	// Allocate a buffer
+	// Allocate a few buffer
 	ColorHex *colors = new ColorHex[num_x_points * num_y_points];
+	Time *exe_time = new Time[num_threads];
+	int *row_counts = new int[num_threads];
+	for (unsigned i = 0; i < num_threads; i++) {
+		exe_time[i] = GetZeroTime();
+		row_counts[i] = 0;
+	}
 
 	// Set the number of threads
 	omp_set_num_threads(num_threads);
 
 	// Calculate the Mandelbort Set
 	Time start = GetCurrentTime();
-	OmpMSCalculation(0, num_x_points, num_y_points, x_scale, y_scale, real_min, imag_min, colors);
+	OmpMSCalculation(0, num_x_points, num_y_points, x_scale, y_scale, real_min, imag_min, colors, exe_time, row_counts);
 	Time end = GetCurrentTime();
 
 	// Print the execution time
@@ -50,6 +56,8 @@ void MSMain(int num_threads, int num_x_points, int num_y_points, double real_min
 	}
 
 	delete[] colors;
+	delete[] exe_time;
+	delete[] row_counts;
 }
 
 } // namespace hw3
