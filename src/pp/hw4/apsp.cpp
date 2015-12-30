@@ -17,7 +17,11 @@ Graph *ReadGraphFromFile(char *file_name) {
     // Allocate a space for the matrix
     Graph *graph = new Graph();
     graph->num_vertices = nvertices;
-    graph->weights = new unsigned[nvertices * nvertices];
+    graph->weights = new Cost[nvertices * nvertices];
+
+    // Fill in all space with "infinite"
+    for (unsigned i = 0; i < nvertices * nvertices; i++)
+        graph->weights[i] = kCostInfinite;
 
     // Read all edges
     unsigned x, y;
@@ -31,6 +35,27 @@ Graph *ReadGraphFromFile(char *file_name) {
     fclose(in);
 
     return graph;
+}
+
+void WriteGraphToFile(char *file_name, Graph *graph) {
+    // Open the file
+    FILE *out = fopen(file_name, "w");
+
+    // Write shortest distance
+    for (unsigned i = 0; i < graph->num_vertices; i++) {
+        for (unsigned j = 0; j < graph->num_vertices; j++) {
+            fprintf(out, "%d", graph->weights[i * nvertices + j]);
+
+            if (j < graph->num_vertices - 1) {
+                fprintf(out, " ");
+            } else {
+                fprintf(out, "\n");
+            }
+        }
+    }
+
+    // Close the file
+    fclose(out);
 }
 
 } // namespace hw4

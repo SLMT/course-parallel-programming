@@ -2,6 +2,8 @@
 
 using pp::hw4::Graph;
 using pp::hw4::ReadGraphFromFile;
+using pp::hw4::CalcAPSP;
+using pp::hw4::WriteGraphToFile;
 
 int main(int argc, char const *argv[]) {
     const unsigned kStrMax = 128;
@@ -23,6 +25,16 @@ int main(int argc, char const *argv[]) {
 
     // Read the graph
     Graph *graph = ReadGraphFromFile(in_file);
+
+    // Calculate APSP
+    CalcAPSP(graph);
+
+    // Write to the file
+    WriteGraphToFile(out_file, graph);
+
+    // Release the resource
+    free[] graph->weights;
+    free graph;
 
     return 0;
 }

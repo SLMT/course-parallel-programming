@@ -4,12 +4,18 @@
 namespace pp {
 namespace hw4 {
 
+typedef int Cost;
+
+const Cost kCostInfinite = -1;
+
 typedef struct {
     unsigned num_vertices;
-    unsigned *weights;
+    Cost *weights;
 } Graph;
 
 Graph *ReadGraphFromFile(char *file_name);
+void CalcAPSP(Graph *graph);
+void WriteGraphToFile(char *file_name, Graph *graph);
 
 } // namespace hw4
 } // namespace pp
