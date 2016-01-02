@@ -27,7 +27,7 @@ Graph *ReadGraphFromFile(char *file_name) {
     unsigned x, y;
     Cost w;
     for (unsigned i = 0; i < nedges; i++) {
-        fscanf("%u %u %u", &x, &y, &w);
+        fscanf(in, "%u %u %u", &x, &y, &w);
         graph->weights[x * nvertices + y] = w;
     }
 
@@ -42,8 +42,9 @@ void WriteGraphToFile(char *file_name, Graph *graph) {
     FILE *out = fopen(file_name, "w");
 
     // Write shortest distance
-    for (unsigned i = 0; i < graph->num_vertices; i++) {
-        for (unsigned j = 0; j < graph->num_vertices; j++) {
+    unsigned nvertices = graph->num_vertices;
+    for (unsigned i = 0; i < nvertices; i++) {
+        for (unsigned j = 0; j < nvertices; j++) {
             fprintf(out, "%d", graph->weights[i * nvertices + j]);
 
             if (j < graph->num_vertices - 1) {

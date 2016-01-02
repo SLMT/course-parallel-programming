@@ -1,4 +1,6 @@
+#include <cstdio>
 #include <cstring>
+#include "apsp.hpp"
 
 using pp::hw4::Graph;
 using pp::hw4::ReadGraphFromFile;
@@ -33,8 +35,8 @@ int main(int argc, char const *argv[]) {
     WriteGraphToFile(out_file, graph);
 
     // Release the resource
-    free[] graph->weights;
-    free graph;
+    delete[] graph->weights;
+    delete graph;
 
     return 0;
 }

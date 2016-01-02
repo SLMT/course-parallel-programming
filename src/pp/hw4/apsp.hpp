@@ -1,12 +1,14 @@
 #ifndef PP_HW4_APSP_H_
 #define PP_HW4_APSP_H_
 
+#include <climits>
+
 namespace pp {
 namespace hw4 {
 
 typedef int Cost;
 
-const Cost kCostInfinite = -1;
+const Cost kCostInfinite = INT_MAX;
 
 typedef struct {
     unsigned num_vertices;
