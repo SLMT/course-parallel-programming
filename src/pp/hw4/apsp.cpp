@@ -20,14 +20,26 @@ Graph *ReadGraphFromFile(char *file_name) {
     graph->weights = new Cost[nvertices * nvertices];
 
     // Fill in all space with "infinite"
-    for (unsigned i = 0; i < nvertices * nvertices; i++)
+    for (unsigned i = 0; i < nvertices * nvertices; i++) {
         graph->weights[i] = kCostInfinite;
+    }
+
+    // But, the cost from a node to itself is 0
+    for (unsigned i = 0; i < nvertices; i++) {
+        graph->weights[i * nvertices + i] = 0;
+    }
 
     // Read all edges
     unsigned x, y;
     Cost w;
     for (unsigned i = 0; i < nedges; i++) {
         fscanf(in, "%u %u %u", &x, &y, &w);
+
+        // Node numbers are start from 1
+        x--;
+        y--;
+
+        // Record the weight
         graph->weights[x * nvertices + y] = w;
     }
 
@@ -42,21 +54,35 @@ void WriteGraphToFile(char *file_name, Graph *graph) {
     FILE *out = fopen(file_name, "w");
 
     // Write shortest distance
-    unsigned nvertices = graph->num_vertices;
-    for (unsigned i = 0; i < nvertices; i++) {
-        for (unsigned j = 0; j < nvertices; j++) {
-            fprintf(out, "%d", graph->weights[i * nvertices + j]);
-
-            if (j < graph->num_vertices - 1) {
-                fprintf(out, " ");
-            } else {
-                fprintf(out, "\n");
-            }
-        }
-    }
+    PrintCosts(out, graph);
 
     // Close the file
     fclose(out);
+}
+
+void PrintCosts(FILE *stream, Graph *graph) {
+    unsigned nvertices = graph->num_vertices;
+    Cost cost;
+
+    for (unsigned i = 0; i < nvertices; i++) {
+        for (unsigned j = 0; j < nvertices; j++) {
+            cost = graph->weights[i * nvertices + j];
+
+            // Print the cost
+            if (cost >= kCostInfinite) {
+                fprintf(stream, "INF");
+            } else {
+                fprintf(stream, "%d", cost);
+            }
+
+            // Print a space or an end of line
+            if (j < graph->num_vertices - 1) {
+                fprintf(stream, " ");
+            } else {
+                fprintf(stream, "\n");
+            }
+        }
+    }
 }
 
 } // namespace hw4

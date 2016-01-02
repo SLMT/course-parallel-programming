@@ -28,11 +28,17 @@ int main(int argc, char const *argv[]) {
     // Read the graph
     Graph *graph = ReadGraphFromFile(in_file);
 
+    PrintCosts(stdout, graph);
+
     // Calculate APSP
     CalcAPSP(graph);
 
+    PrintCosts(stdout, graph);
+
     // Write to the file
     WriteGraphToFile(out_file, graph);
+
+    PrintCosts(stdout, graph);
 
     // Release the resource
     delete[] graph->weights;
