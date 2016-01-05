@@ -3,7 +3,7 @@
 namespace pp {
 namespace hw4 {
 
-void CalcAPSP(Graph *graph) {
+void CalcAPSP(Graph *graph, unsigned block_size) {
 	unsigned nvertices = graph->num_vertices;
 	Cost *weights = graph->weights;
 

@@ -31,7 +31,7 @@ int main(int argc, char const *argv[]) {
     PrintCosts(stdout, graph);
 
     // Calculate APSP
-    CalcAPSP(graph);
+    CalcAPSP(graph, block_size);
 
     PrintCosts(stdout, graph);
 

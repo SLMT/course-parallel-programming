@@ -17,7 +17,7 @@ typedef struct {
 } Graph;
 
 Graph *ReadGraphFromFile(char *file_name);
-void CalcAPSP(Graph *graph);
+void CalcAPSP(Graph *graph, unsigned block_size);
 void WriteGraphToFile(char *file_name, Graph *graph);
 void PrintCosts(FILE *stream, Graph *graph);
 
