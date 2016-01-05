@@ -5,6 +5,11 @@ namespace hw4 {
 
 __device__ void CalcBlocks() {
 	// TODO: Plan this part for multiple CUDA threads
+
+	// Plan: We can let 1 APSP block to 1 CUDA block mapping.
+	// A node in a block is assigned to a CUDA thread in a CUDA block.
+	// It needs to be looped k times for k middle nodes.
+	// Each loop should have a synchronized barrier in the end.
 }
 
 __global__ void BlockedAPSP(Cost *costs, unsigned num_node, unsigned block_size) {
