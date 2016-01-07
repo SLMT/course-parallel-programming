@@ -3,13 +3,32 @@
 namespace pp {
 namespace hw4 {
 
-__device__ void CalcBlocks() {
-	// TODO: Plan this part for multiple CUDA threads
-
-	// Plan: We can let 1 APSP block to 1 CUDA block mapping.
-	// A node in a block is assigned to a CUDA thread in a CUDA block.
+__device__ void CalcBlocks(Cost *costs, unsigned block_size, unsigned round_num, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+	// Plan: We can map 1 APSP block to 1 CUDA block.
+	// A value of a block is assigned to a CUDA thread of a CUDA block.
 	// It needs to be looped k times for k middle nodes.
 	// Each loop should have a synchronized barrier in the end.
+
+	// Make sure it is inside the range
+	if (blockIdx.x >= block_x_len || blockIdx.y >= block_y_len)
+		return;
+
+	// Calculate the block index
+	unsigned bx = block_x_start + blockIdx.x;
+	unsigned by = block_y_start + blockIdx.y;
+
+	// Calculate the node index
+	unsigned src_index = bx * block_size + threadIdx.x;
+	unsigned dest_index = by * block_size + threadIdx.y;
+
+	Cost newCost;
+	for (unsigned mid_index/* TODO: k times */) {
+		newCost = costs[src_index][mid_index] + costs[mid_index][dest_index];
+		if (newCost < costs[src_index][dest_index])
+			costs[src_index][dest_index] = newCost;
+
+		// TODO: Synchronized
+	}
 }
 
 __global__ void BlockedAPSP(Cost *costs, unsigned num_node, unsigned block_size) {
@@ -48,17 +67,25 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		}
 	}
 
-	// TODO: Allocate memory on GPU
+	// Allocate memory on GPU
+	Cost *costs_on_gpu;
+	sizt_t data_size = nvertices * nvertices;
+	cudaMalloc((void **) &costs_on_gpu, data_size);
 
-	// TODO: Copy the graph from Host to Device
+	// Copy the graph from Host to Device
+	cudaMemcpy(costs_on_gpu, graph->weights, data_size, cudaMemcpyHostToDevice);
 
-	// TODO: Call blocked-APSP kernel (name<<<num_blocks, num_thread>>>(paramters))
+	// TODO: Call blocked-APSP kernel
+	size_t num_blocks =
+	size_t num_thread =
+	BlockedAPSP<<<num_blocks, num_thread>>>();
+	cudaThreadSynchronize();
 
-	// TODO: Copy the result from Device to Host
+	// Copy the result from Device to Host
+	cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
 
-	// TODO: Free memory on GPU
-
-	// TODO: Return the result
+	// Free memory on GPU
+	cudaFree(costs_on_gpu);
 }
 
 // =====================================================
