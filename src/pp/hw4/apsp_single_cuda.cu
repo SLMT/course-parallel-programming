@@ -31,10 +31,9 @@ __device__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size,
 
 	Cost newCost;
 	for (unsigned mid_idx = mid_start_idx + 0; mid_idx < mid_end_idx; mid_idx++) {
-		mid_idx
-		newCost = costs[src_idx][mid_idx] + costs[mid_idx][dst_idx];
-		if (newCost < costs[src_idx][dst_idx])
-			costs[src_idx][dst_idx] = newCost;
+		newCost = costs[src_idx * num_nodes + mid_idx] + costs[mid_idx * num_nodes + dst_idx];
+		if (newCost < costs[src_idx * num_nodes + dst_idx])
+			costs[src_idx * num_nodes + dst_idx] = newCost;
 
 		// Synchronized
 		__syncthreads();
@@ -77,31 +76,26 @@ __global__ void BlockedAPSP(Cost *costs, unsigned num_nodes, unsigned block_size
 		CalcBlocks(costs, num_nodes, block_size, round_idx, rp1, rp1, rr1, rr1);
 		__syncthreads();
 	}
-
-			/* Phase 3*/
-			cal(B, r,     0,     0,            r,             r);
-			cal(B, r,     0,  r +1,  round -r -1,             r);
-			cal(B, r,  r +1,     0,            r,  round - r -1);
-			cal(B, r,  r +1,  r +1,  round -r -1,  round - r -1);
-		}
 }
 
 void CalcAPSP(Graph *graph, unsigned block_size) {
 	unsigned nvertices = graph->num_vertices;
-	Cost *weights = graph->weights;
+
+	// Device (GPU) Initialization
+	cudaSetDevice(0);
 
 	// Allocate memory on GPU
 	Cost *costs_on_gpu;
-	sizt_t data_size = nvertices * nvertices;
+	unsigned data_size = nvertices * nvertices;
 	cudaMalloc((void **) &costs_on_gpu, data_size);
 
 	// Copy the graph from Host to Device
 	cudaMemcpy(costs_on_gpu, graph->weights, data_size, cudaMemcpyHostToDevice);
 
 	// Call blocked-APSP kernel
-	size_t num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
-	size_t num_thread = block_size * block_size;
-	BlockedAPSP<<<num_blocks, num_thread>>>(weights, nvertices, block_size, num_rounds);
+	unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
+	unsigned num_thread = block_size * block_size;
+	BlockedAPSP<<<num_rounds, num_thread>>>(costs_on_gpu, nvertices, block_size, num_rounds);
 	cudaThreadSynchronize();
 
 	// Copy the result from Device to Host
@@ -111,4 +105,5 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	cudaFree(costs_on_gpu);
 }
 
+}
 }
