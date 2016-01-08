@@ -3,7 +3,7 @@
 namespace pp {
 namespace hw4 {
 
-__device__ void CalcBlocks(Cost *costs, unsigned block_size, unsigned round_num, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+__device__ void CalcBlocks(Cost *costs, unsigned num_node, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
 	// Plan: We can map 1 APSP block to 1 CUDA block.
 	// A value of a block is assigned to a CUDA thread of a CUDA block.
 	// It needs to be looped k times for k middle nodes.
@@ -18,16 +18,26 @@ __device__ void CalcBlocks(Cost *costs, unsigned block_size, unsigned round_num,
 	unsigned by = block_y_start + blockIdx.y;
 
 	// Calculate the node index
-	unsigned src_index = bx * block_size + threadIdx.x;
-	unsigned dest_index = by * block_size + threadIdx.y;
+	unsigned src_idx = bx * block_size + threadIdx.x;
+	unsigned dst_idx = by * block_size + threadIdx.y;
+
+	// Make sure it is inside the range
+	if (src_idx >= num_node || dst_idx >= num_node)
+		return;
+
+	// Calcuate the start and the end index of middle nodes
+	unsigned mid_start_idx = block_size * round_idx;
+	unsigned mid_end_idx = (((block_size + 1) * round_idx) < num_node)? ((block_size + 1) * round_idx) : num_node;
 
 	Cost newCost;
-	for (unsigned mid_index/* TODO: k times */) {
-		newCost = costs[src_index][mid_index] + costs[mid_index][dest_index];
-		if (newCost < costs[src_index][dest_index])
-			costs[src_index][dest_index] = newCost;
+	for (unsigned mid_idx = mid_start_idx + 0; mid_idx < mid_end_idx; mid_idx++) {
+		mid_idx
+		newCost = costs[src_idx][mid_idx] + costs[mid_idx][dst_idx];
+		if (newCost < costs[src_idx][dst_idx])
+			costs[src_idx][dst_idx] = newCost;
 
-		// TODO: Synchronized
+		// Synchronized
+		__syncthreads();
 	}
 }
 
