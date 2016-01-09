@@ -3,15 +3,11 @@
 namespace pp {
 namespace hw4 {
 
-__device__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+__global__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
 	// Plan: We can map 1 APSP block to 1 CUDA block.
 	// A value of a block is assigned to a CUDA thread of a CUDA block.
 	// It needs to be looped k times for k middle nodes.
 	// Each loop should have a synchronized barrier in the end.
-
-	// Make sure it is inside the range
-	if (blockIdx.x >= block_x_len || blockIdx.y >= block_y_len)
-		return;
 
 	// Calculate the block index
 	unsigned bx = block_x_start + blockIdx.x;
@@ -40,42 +36,11 @@ __device__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size,
 	}
 }
 
-__global__ void BlockedAPSP(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned num_rounds) {
-	// TODO: (Opt.) Declare the variables in shared memory
+void CUDACalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+	dim3 num_blocks(block_x_len, block_y_len);
+	dim3 num_threads(block_size, block_size);
 
-	// TODO: (Opt.) Copy the data from Global to Shared Memory
-
-	// Multiple rounds
-	for (unsigned round_idx = 0; round_idx < num_rounds; round_idx++) {
-		unsigned rp1 = round_idx + 1;
-		unsigned rr1 = num_rounds - round_idx - 1;
-
-		// Phase 1
-		CalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, round_idx, 1, 1);
-		__syncthreads();
-
-		// Phase 2
-		// Up
-		CalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, 0, 1, round_idx);
-		// Left
-		CalcBlocks(costs, num_nodes, block_size, round_idx, 0, round_idx, round_idx, 1);
-		// Right
-		CalcBlocks(costs, num_nodes, block_size, round_idx, rp1, round_idx, rr1, 1);
-		// Down
-		CalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, rp1, 1, rr1);
-		__syncthreads();
-
-		// Phase 3
-		// Left-Up
-		CalcBlocks(costs, num_nodes, block_size, round_idx, 0, 0, round_idx, round_idx);
-		// Right-Up
-		CalcBlocks(costs, num_nodes, block_size, round_idx, rp1, 0, rr1, round_idx);
-		// Left-Down
-		CalcBlocks(costs, num_nodes, block_size, round_idx, 0, rp1, round_idx, rr1);
-		// Right-Down
-		CalcBlocks(costs, num_nodes, block_size, round_idx, rp1, rp1, rr1, rr1);
-		__syncthreads();
-	}
+	CalcBlocks<<<num_blocks, num_threads>>>(costs, num_nodes, block_size, round_idx, block_x_start, block_y_start);
 }
 
 void CalcAPSP(Graph *graph, unsigned block_size) {
@@ -92,11 +57,42 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	// Copy the graph from Host to Device
 	cudaMemcpy(costs_on_gpu, graph->weights, data_size, cudaMemcpyHostToDevice);
 
-	// Call blocked-APSP kernel
+	// Blocked-APSP Algorithm
 	unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
-	dim3 num_blocks(num_rounds, num_rounds);
-	dim3 num_threads(block_size, block_size);
-	BlockedAPSP<<<num_blocks, num_threads>>>(costs_on_gpu, nvertices, block_size, num_rounds);
+
+	// Multiple rounds
+	for (unsigned round_idx = 0; round_idx < num_rounds; round_idx++) {
+		unsigned rp1 = round_idx + 1;
+		unsigned rr1 = num_rounds - round_idx - 1;
+
+		// Phase 1
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, round_idx, 1, 1);
+		// TODO: Do we need synchronized ?
+
+		// Phase 2
+		// Up
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, 0, 1, round_idx);
+		// Left
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, round_idx, round_idx, 1);
+		// Right
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, round_idx, rr1, 1);
+		// Down
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, rp1, 1, rr1);
+		// TODO: Do we need synchronized ?
+
+		// Phase 3
+		// Left-Up
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, 0, round_idx, round_idx);
+		// Right-Up
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, 0, rr1, round_idx);
+		// Left-Down
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, rp1, round_idx, rr1);
+		// Right-Down
+		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, rp1, rr1, rr1);
+		// TODO: Do we need synchronized ?
+	}
+
+	// Wait for complete
 	cudaThreadSynchronize();
 
 	// Copy the result from Device to Host
