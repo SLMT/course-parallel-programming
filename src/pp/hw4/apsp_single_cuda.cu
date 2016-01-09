@@ -27,7 +27,7 @@ __device__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size,
 
 	// Calcuate the start and the end index of middle nodes
 	unsigned mid_start_idx = block_size * round_idx;
-	unsigned mid_end_idx = (((block_size + 1) * round_idx) < num_nodes)? ((block_size + 1) * round_idx) : num_nodes;
+	unsigned mid_end_idx = ((block_size * (round_idx + 1)) < num_nodes)? (block_size * (round_idx + 1)) : num_nodes;
 
 	Cost newCost;
 	for (unsigned mid_idx = mid_start_idx + 0; mid_idx < mid_end_idx; mid_idx++) {
@@ -82,11 +82,11 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	unsigned nvertices = graph->num_vertices;
 
 	// Device (GPU) Initialization
-	cudaSetDevice(0);
+	//cudaSetDevice(0);
 
 	// Allocate memory on GPU
 	Cost *costs_on_gpu;
-	unsigned data_size = nvertices * nvertices;
+	unsigned data_size = sizeof(Cost) * nvertices * nvertices;
 	cudaMalloc((void **) &costs_on_gpu, data_size);
 
 	// Copy the graph from Host to Device
@@ -94,8 +94,9 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 
 	// Call blocked-APSP kernel
 	unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
-	unsigned num_thread = block_size * block_size;
-	BlockedAPSP<<<num_rounds, num_thread>>>(costs_on_gpu, nvertices, block_size, num_rounds);
+	dim3 num_blocks(num_rounds, num_rounds);
+	dim3 num_threads(block_size, block_size);
+	BlockedAPSP<<<num_blocks, num_threads>>>(costs_on_gpu, nvertices, block_size, num_rounds);
 	cudaThreadSynchronize();
 
 	// Copy the result from Device to Host
