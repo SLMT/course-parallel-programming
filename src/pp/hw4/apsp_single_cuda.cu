@@ -66,34 +66,34 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		unsigned rr1 = num_rounds - round_idx - 1;
 
 		// Phase 1
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, round_idx, 1, 1);
-		// TODO: Do we need synchronized ?
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, round_idx, 1, 1);
+		// Wait for complete
+		cudaThreadSynchronize();
 
 		// Phase 2
 		// Up
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, 0, 1, round_idx);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, 0, 1, round_idx);
 		// Left
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, round_idx, round_idx, 1);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, round_idx, round_idx, 1);
 		// Right
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, round_idx, rr1, 1);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, round_idx, rr1, 1);
 		// Down
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, round_idx, rp1, 1, rr1);
-		// TODO: Do we need synchronized ?
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, rp1, 1, rr1);
+		// Wait for complete
+		cudaThreadSynchronize();
 
 		// Phase 3
 		// Left-Up
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, 0, round_idx, round_idx);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, 0, round_idx, round_idx);
 		// Right-Up
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, 0, rr1, round_idx);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, 0, rr1, round_idx);
 		// Left-Down
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, 0, rp1, round_idx, rr1);
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, rp1, round_idx, rr1);
 		// Right-Down
-		CUDACalcBlocks(costs, num_nodes, block_size, round_idx, rp1, rp1, rr1, rr1);
-		// TODO: Do we need synchronized ?
+		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, rp1, rr1, rr1);
+		// Wait for complete
+		cudaThreadSynchronize();
 	}
-
-	// Wait for complete
-	cudaThreadSynchronize();
 
 	// Copy the result from Device to Host
 	cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);

@@ -29,13 +29,13 @@ int main(int argc, char const *argv[]) {
     Graph *graph = ReadGraphFromFile(in_file);
 
     // XXX: Debug
-    PrintCosts(stdout, graph);
+    //PrintCosts(stdout, graph);
 
     // Calculate APSP
     CalcAPSP(graph, block_size);
 
     // XXX: Debug
-    PrintCosts(stdout, graph);
+    //PrintCosts(stdout, graph);
 
     // Write to the file
     WriteGraphToFile(out_file, graph);
