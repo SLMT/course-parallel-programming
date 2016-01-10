@@ -3,6 +3,7 @@
 namespace pp {
 namespace hw4 {
 
+// TODO: Change to a device function and accept 3 more arguments (1 local block data, 2 dependent block data)
 __global__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
 	// Plan: We can map 1 APSP block to 1 CUDA block.
 	// A value of a block is assigned to a CUDA thread of a CUDA block.
@@ -36,6 +37,15 @@ __global__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size,
 	}
 }
 
+// TODO: Add 3 kernel functions
+// Each function copys the data from global memory to shared memory, and call the
+// above device function.
+// 1st function do the copys for independent blocks
+// 2nd function do the copys for singly-dependent blocks
+// 3rd function do the copys for doubly-dependent blocks
+
+// TODO: Add 3 host functions to call above 3 kernel functions
+
 void CUDACalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
 	dim3 num_blocks(block_x_len, block_y_len);
 	dim3 num_threads(block_size, block_size);
@@ -59,11 +69,11 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 
 	// Blocked-APSP Algorithm
 	unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
-
-	// Multiple rounds
 	for (unsigned round_idx = 0; round_idx < num_rounds; round_idx++) {
 		unsigned rp1 = round_idx + 1;
 		unsigned rr1 = num_rounds - round_idx - 1;
+
+		// TODO: Use the new functions
 
 		// Phase 1
 		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, round_idx, 1, 1);

@@ -1,7 +1,12 @@
 #include <cstdio>
 #include <cstring>
-#include "apsp.hpp"
 
+#include "apsp.hpp"
+#include "../timer.hpp"
+
+using pp::Time;
+using pp::GetCurrentTime;
+using pp::TimeDiffInMs;
 using pp::hw4::Graph;
 using pp::hw4::ReadGraphFromFile;
 using pp::hw4::CalcAPSP;
@@ -31,8 +36,15 @@ int main(int argc, char const *argv[]) {
     // XXX: Debug
     //PrintCosts(stdout, graph);
 
+    // Record the start time
+    Time start_time = GetCurrentTime();
+
     // Calculate APSP
     CalcAPSP(graph, block_size);
+
+    // Record the end time and print the time
+    Time end_time = GetCurrentTime();
+    printf("Calculation takes %ld ms.\n", TimeDiffInMs(start_time, end_time));
 
     // XXX: Debug
     //PrintCosts(stdout, graph);
