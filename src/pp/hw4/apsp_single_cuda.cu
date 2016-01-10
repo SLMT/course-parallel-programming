@@ -3,55 +3,137 @@
 namespace pp {
 namespace hw4 {
 
-// TODO: Change to a device function and accept 3 more arguments (1 local block data, 2 dependent block data)
-__global__ void CalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
+__device__ void CalcABlock(Cost *self, Cost *depen1, Cost *depen2, unsigned block_size, unsigned num_mid) {
 	// Plan: We can map 1 APSP block to 1 CUDA block.
 	// A value of a block is assigned to a CUDA thread of a CUDA block.
 	// It needs to be looped k times for k middle nodes.
 	// Each loop should have a synchronized barrier in the end.
 
-	// Calculate the block index
-	unsigned bx = block_x_start + blockIdx.x;
-	unsigned by = block_y_start + blockIdx.y;
+	Cost cost1, cost2, final_cost;
+	unsigned src_idx = threadIdx.x;
+	unsigned dst_idx = threadIdx.y;
 
-	// Calculate the node index
-	unsigned src_idx = bx * block_size + threadIdx.x;
-	unsigned dst_idx = by * block_size + threadIdx.y;
-
-	// Make sure it is inside the range
-	if (src_idx >= num_nodes || dst_idx >= num_nodes)
-		return;
-
-	// Calcuate the start and the end index of middle nodes
-	unsigned mid_start_idx = block_size * round_idx;
-	unsigned mid_end_idx = ((block_size * (round_idx + 1)) < num_nodes)? (block_size * (round_idx + 1)) : num_nodes;
-
-	Cost newCost;
-	for (unsigned mid_idx = mid_start_idx + 0; mid_idx < mid_end_idx; mid_idx++) {
-		newCost = costs[src_idx * num_nodes + mid_idx] + costs[mid_idx * num_nodes + dst_idx];
-		if (newCost < costs[src_idx * num_nodes + dst_idx])
-			costs[src_idx * num_nodes + dst_idx] = newCost;
+	for (unsigned mid_idx = 0; mid_idx < num_mid; mid_idx++) {
+		// Find the smaller cost
+		cost1 = self[src_idx * block_size + dst_idx];
+		cost2 = depen1[src_idx * block_size + mid_idx] + depen2[mid_idx * block_size + dst_idx];
+		final_cost = (cost1 < cost2)? cost1 : cost2;
 
 		// Synchronized
 		__syncthreads();
+
+		// Save the new cost back to shared memory
+		self[src_idx * block_size + dst_idx] = final_cost;
 	}
 }
 
-// TODO: Add 3 kernel functions
-// Each function copys the data from global memory to shared memory, and call the
-// above device function.
-// 1st function do the copys for independent blocks
-// 2nd function do the copys for singly-dependent blocks
-// 3rd function do the copys for doubly-dependent blocks
+// A shared memory variable
+extern __shared__ Cost costs_in_sm[];
 
-// TODO: Add 3 host functions to call above 3 kernel functions
+__device__ void CopyCostFromGlobalToSM(Cost *gl, Cost *sm, unsigned block_size, unsigned bx, unsigned by) {
+	unsigned gx = bx * block_size + threadIdx.x;
+	unsigned gy = by * block_size + threadIdx.y;
+	unsigned sx = threadIdx.x;
+	unsigned sy = threadIdx.y;
 
-void CUDACalcBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+	sm[sx * block_size + sy] = gl[gx * block_size + gy];
+}
+
+__device__ void CopyCostFromSMToGlobal(Cost *gl, Cost *sm, unsigned block_size, unsigned bx, unsigned by) {
+	unsigned gx = bx * block_size + threadIdx.x;
+	unsigned gy = by * block_size + threadIdx.y;
+	unsigned sx = threadIdx.x;
+	unsigned sy = threadIdx.y;
+
+	gl[gx * block_size + gy] = sm[sx * block_size + sy];
+}
+
+__global__ void CalcIndependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx) {
+	unsigned gx = round_idx * block_size + threadIdx.x;
+	unsigned gy = round_idx * block_size + threadIdx.y;
+	unsigned num_mid = ((round_idx + 1) * block_size < num_nodes)? block_size : num_nodes - round_idx * block_size;
+
+	if (gx < num_nodes && gy < num_nodes) {
+		// Move the data from Global to Shared Memory
+		CopyCostFromGlobalToSM(costs, costs_in_sm, round_idx, round_idx, block_size);
+
+		// Calculate the block
+		CalcABlock(costs_in_sm, costs_in_sm, costs_in_sm, block_size, num_mid);
+
+		// Move the data back to Global
+		CopyCostFromSMToGlobal(costs, costs_in_sm, round_idx, round_idx, block_size);
+	}
+}
+
+__global__ void CalcSinglyDependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
+	unsigned gx = (block_x_start + blockIdx.x) * block_size + threadIdx.x;
+	unsigned gy = (block_y_start + blockIdx.y) * block_size + threadIdx.y;
+	unsigned num_mid = ((round_idx + 1) * block_size < num_nodes)? block_size : num_nodes - round_idx * block_size;
+	Cost *self_in_sm = costs_in_sm;
+	Cost *depen_in_sm = costs_in_sm + block_size * block_size;
+
+	if (gx < num_nodes && gy < num_nodes) {
+		// Move the data from Global to Shared Memory
+		CopyCostFromGlobalToSM(costs, self_in_sm, block_x_start + blockIdx.x, block_y_start + blockIdx.y, block_size);
+		CopyCostFromGlobalToSM(costs, depen_in_sm, round_idx, round_idx, block_size);
+
+		// Calculate the block
+		CalcABlock(self_in_sm, depen_in_sm, self_in_sm, block_size, num_mid);
+
+		// Move the data back to Global
+		CopyCostFromSMToGlobal(costs, self_in_sm, block_x_start + blockIdx.x, block_y_start + blockIdx.y, block_size);
+		CopyCostFromSMToGlobal(costs, depen_in_sm, round_idx, round_idx, block_size);
+	}
+}
+
+__global__ void CalcDoublyDependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
+	unsigned gx = (block_x_start + blockIdx.x) * block_size + threadIdx.x;
+	unsigned gy = (block_y_start + blockIdx.y) * block_size + threadIdx.y;
+	unsigned num_mid = ((round_idx + 1) * block_size < num_nodes)? block_size : num_nodes - round_idx * block_size;
+	Cost *self_in_sm = costs_in_sm;
+	Cost *depen1_in_sm = costs_in_sm + block_size * block_size;
+	Cost *depen2_in_sm = costs_in_sm + 2 * block_size * block_size;
+
+	if (gx < num_nodes && gy < num_nodes) {
+		// Move the data from Global to Shared Memory
+		CopyCostFromGlobalToSM(costs, self_in_sm, block_x_start + blockIdx.x, block_y_start + blockIdx.y, block_size);
+		CopyCostFromGlobalToSM(costs, depen1_in_sm, block_x_start + blockIdx.x, round_idx, block_size);
+		CopyCostFromGlobalToSM(costs, depen2_in_sm, round_idx, block_y_start + blockIdx.y, block_size);
+
+		// Calculate the block
+		CalcABlock(self_in_sm, depen1_in_sm, depen2_in_sm, block_size, num_mid);
+
+		// Move the data back to Global
+		CopyCostFromSMToGlobal(costs, self_in_sm, block_x_start + blockIdx.x, block_y_start + blockIdx.y, block_size);
+		CopyCostFromSMToGlobal(costs, depen1_in_sm, block_x_start + blockIdx.x, round_idx, block_size);
+		CopyCostFromSMToGlobal(costs, depen2_in_sm, round_idx, block_y_start + blockIdx.y, block_size);
+	}
+}
+
+void CUDACalcIndependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx) {
+	dim3 num_blocks(1, 1);
+	dim3 num_threads(block_size, block_size);
+	unsigned sm_size = block_size * block_size * sizeof(Cost);
+
+	CalcIndependBlocks<<<num_blocks, num_threads, sm_size>>>(costs, num_nodes, block_size, round_idx);
+}
+
+void CUDACalcSinglyDependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
 	dim3 num_blocks(block_x_len, block_y_len);
 	dim3 num_threads(block_size, block_size);
+	unsigned sm_size = 2 * block_size * block_size * sizeof(Cost);
 
-	CalcBlocks<<<num_blocks, num_threads>>>(costs, num_nodes, block_size, round_idx, block_x_start, block_y_start);
+	CalcSinglyDependBlocks<<<num_blocks, num_threads, sm_size>>>(costs, num_nodes, block_size, round_idx, block_x_start, block_y_start);
 }
+
+void CUDACalcDoublyDependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start, unsigned block_x_len, unsigned block_y_len) {
+	dim3 num_blocks(block_x_len, block_y_len);
+	dim3 num_threads(block_size, block_size);
+	unsigned sm_size = 3 * block_size * block_size * sizeof(Cost);
+
+	CalcDoublyDependBlocks<<<num_blocks, num_threads, sm_size>>>(costs, num_nodes, block_size, round_idx, block_x_start, block_y_start);
+}
+
 
 void CalcAPSP(Graph *graph, unsigned block_size) {
 	unsigned nvertices = graph->num_vertices;
@@ -73,34 +155,32 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		unsigned rp1 = round_idx + 1;
 		unsigned rr1 = num_rounds - round_idx - 1;
 
-		// TODO: Use the new functions
-
 		// Phase 1
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, round_idx, 1, 1);
+		CUDACalcIndependBlocks(costs_on_gpu, nvertices, block_size, round_idx);
 		// Wait for complete
 		cudaThreadSynchronize();
 
 		// Phase 2
 		// Up
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, 0, 1, round_idx);
+		CUDACalcSinglyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, 0, 1, round_idx);
 		// Left
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, round_idx, round_idx, 1);
+		CUDACalcSinglyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, round_idx, round_idx, 1);
 		// Right
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, round_idx, rr1, 1);
+		CUDACalcSinglyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, round_idx, rr1, 1);
 		// Down
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, rp1, 1, rr1);
+		CUDACalcSinglyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, round_idx, rp1, 1, rr1);
 		// Wait for complete
 		cudaThreadSynchronize();
 
 		// Phase 3
 		// Left-Up
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, 0, round_idx, round_idx);
+		CUDACalcDoublyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, 0, round_idx, round_idx);
 		// Right-Up
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, 0, rr1, round_idx);
+		CUDACalcDoublyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, 0, rr1, round_idx);
 		// Left-Down
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, rp1, round_idx, rr1);
+		CUDACalcDoublyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, 0, rp1, round_idx, rr1);
 		// Right-Down
-		CUDACalcBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, rp1, rr1, rr1);
+		CUDACalcDoublyDependBlocks(costs_on_gpu, nvertices, block_size, round_idx, rp1, rp1, rr1, rr1);
 		// Wait for complete
 		cudaThreadSynchronize();
 	}
