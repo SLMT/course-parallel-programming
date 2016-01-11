@@ -1,5 +1,7 @@
 #include "apsp.hpp"
 
+#include "io.hpp"
+
 namespace pp {
 namespace hw4 {
 
@@ -76,7 +78,7 @@ __global__ void CalcIndependBlocks(Cost *costs, unsigned num_nodes, unsigned blo
 	if (gx < num_nodes && gy < num_nodes)
 		CalcABlock(costs_in_sm, costs_in_sm, costs_in_sm, block_size, num_mid);
 
-	// Move the data back to Global
+	// Move the self data back to Global
 	CopyCostFromSMToGlobal(costs, costs_in_sm, num_nodes, block_size, round_idx, round_idx);
 }
 
@@ -93,11 +95,10 @@ __global__ void CalcSinglyDependBlocks(Cost *costs, unsigned num_nodes, unsigned
 
 	// Calculate the block
 	if (gx < num_nodes && gy < num_nodes)
-		CalcABlock(self_in_sm, depen_in_sm, self_in_sm, block_size, num_mid);
+		CalcABlock(self_in_sm, self_in_sm, depen_in_sm, block_size, num_mid);
 
-	// Move the data back to Global
+	// Move the self data back to Global
 	CopyCostFromSMToGlobal(costs, self_in_sm, num_nodes, block_size, block_x_start + blockIdx.x, block_y_start + blockIdx.y);
-	CopyCostFromSMToGlobal(costs, depen_in_sm, num_nodes, block_size, round_idx, round_idx);
 }
 
 __global__ void CalcDoublyDependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned block_x_start, unsigned block_y_start) {
@@ -117,10 +118,8 @@ __global__ void CalcDoublyDependBlocks(Cost *costs, unsigned num_nodes, unsigned
 	if (gx < num_nodes && gy < num_nodes)
 		CalcABlock(self_in_sm, depen1_in_sm, depen2_in_sm, block_size, num_mid);
 
-	// Move the data back to Global
+	// Move the self data back to Global
 	CopyCostFromSMToGlobal(costs, self_in_sm, num_nodes, block_size, block_x_start + blockIdx.x, block_y_start + blockIdx.y);
-	CopyCostFromSMToGlobal(costs, depen1_in_sm, num_nodes, block_size, block_x_start + blockIdx.x, round_idx);
-	CopyCostFromSMToGlobal(costs, depen2_in_sm, num_nodes, block_size, round_idx, block_y_start + blockIdx.y);
 }
 
 void CUDACalcIndependBlocks(Cost *costs, unsigned num_nodes, unsigned block_size, unsigned round_idx) {
@@ -160,9 +159,9 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	cudaMalloc((void **) &costs_on_gpu, data_size);
 
 	// XXX: Debug
-	// printf("Original:\n");
-	// PrintCosts(stdout, graph);
-	// printf("\n");
+	printf("Original:\n");
+	PrintCosts(stdout, graph);
+	printf("\n");
 
 	// Copy the graph from Host to Device
 	cudaMemcpy(costs_on_gpu, graph->weights, data_size, cudaMemcpyHostToDevice);
@@ -179,10 +178,10 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		cudaThreadSynchronize();
 
 		// XXX: Debug
-		// cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
-		// printf("Round %u, phase 1:\n", round_idx);
-		// PrintCosts(stdout, graph);
-		// printf("\n");
+		cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
+		printf("Round %u, phase 1:\n", round_idx);
+		PrintCosts(stdout, graph);
+		printf("\n");
 
 		// Phase 2
 		// Up
@@ -197,10 +196,10 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		cudaThreadSynchronize();
 
 		// XXX: Debug
-		// cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
-		// printf("Round %u, phase 2:\n", round_idx);
-		// PrintCosts(stdout, graph);
-		// printf("\n");
+		cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
+		printf("Round %u, phase 2:\n", round_idx);
+		PrintCosts(stdout, graph);
+		printf("\n");
 
 		// Phase 3
 		// Left-Up
@@ -215,10 +214,10 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		cudaThreadSynchronize();
 
 		// XXX: Debug
-		// cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
-		// printf("Round %u, phase 3:\n", round_idx);
-		// PrintCosts(stdout, graph);
-		// printf("\n");
+		cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
+		printf("Round %u, phase 3:\n", round_idx);
+		PrintCosts(stdout, graph);
+		printf("\n");
 	}
 
 	// Copy the result from Device to Host
