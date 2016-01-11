@@ -3,6 +3,17 @@
 namespace pp {
 namespace hw4 {
 
+// Pinned Memory Optimization
+Cost *NewCosts(unsigned num_costs) {
+	Cost *costs;
+	cudaMallocHost((void **) &costs, num_costs * sizeof(Cost));
+	return costs;
+}
+
+void DeleteCosts(Cost *costs) {
+	cudaFreeHost(costs);
+}
+
 __device__ void CalcABlock(Cost *self, Cost *depen1, Cost *depen2, unsigned block_size, unsigned num_mid) {
 	// Plan: We can map 1 APSP block to 1 CUDA block.
 	// A value of a block is assigned to a CUDA thread of a CUDA block.
@@ -30,7 +41,7 @@ __device__ void CalcABlock(Cost *self, Cost *depen1, Cost *depen2, unsigned bloc
 	}
 }
 
-// A shared memory variable
+// Shared Memory Optimization
 extern __shared__ Cost costs_in_sm[];
 
 __device__ void CopyCostFromGlobalToSM(Cost *gl, Cost *sm, unsigned num_nodes, unsigned block_size, unsigned bx, unsigned by) {

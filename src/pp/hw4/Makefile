@@ -10,7 +10,7 @@ SINGLE_CUDA_EXEC = single_cuda
 OPENMP_CUDA_EXEC = openmp_cuda
 MPI_CUDA_EXEC = mpi_cuda
 
-COMMON_SOURCE = apsp.cpp main.cpp ../timer.cpp
+COMMON_SOURCE = io.cpp main.cpp ../timer.cpp
 
 # Main target
 all: single_cuda openmp_cuda mpi_cuda

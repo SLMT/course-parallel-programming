@@ -3,6 +3,14 @@
 namespace pp {
 namespace hw4 {
 
+Cost *NewCosts(unsigned num_costs) {
+	return new Cost[num_costs];
+}
+
+void DeleteCosts(Cost *costs) {
+	delete[] costs;
+}
+
 void CalcAPSP(Graph *graph, unsigned block_size) {
 	unsigned nvertices = graph->num_vertices;
 	Cost *weights = graph->weights;

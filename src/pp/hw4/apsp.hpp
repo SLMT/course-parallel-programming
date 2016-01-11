@@ -1,9 +1,6 @@
 #ifndef PP_HW4_APSP_H_
 #define PP_HW4_APSP_H_
 
-#include <cstdio>
-#include <climits>
-
 namespace pp {
 namespace hw4 {
 
@@ -16,10 +13,9 @@ typedef struct {
     Cost *weights;
 } Graph;
 
-Graph *ReadGraphFromFile(char *file_name);
+Cost *NewCosts(unsigned num_costs);
+void DeleteCosts(Cost *costs);
 void CalcAPSP(Graph *graph, unsigned block_size);
-void WriteGraphToFile(char *file_name, Graph *graph);
-void PrintCosts(FILE *stream, Graph *graph);
 
 } // namespace hw4
 } // namespace pp

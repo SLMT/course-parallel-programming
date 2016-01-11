@@ -1,6 +1,7 @@
-#include "apsp.hpp"
+#include "io.hpp"
 
 #include <cstdio>
+#include "apsp.hpp"
 
 namespace pp {
 namespace hw4 {
@@ -17,7 +18,7 @@ Graph *ReadGraphFromFile(char *file_name) {
     // Allocate a space for the matrix
     Graph *graph = new Graph();
     graph->num_vertices = nvertices;
-    graph->weights = new Cost[nvertices * nvertices];
+    graph->weights = NewCosts(nvertices * nvertices);
 
     // Fill in all space with "infinite"
     for (unsigned i = 0; i < nvertices * nvertices; i++) {

@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include "io.hpp"
 #include "apsp.hpp"
 #include "../timer.hpp"
 
@@ -11,6 +12,7 @@ using pp::hw4::Graph;
 using pp::hw4::ReadGraphFromFile;
 using pp::hw4::CalcAPSP;
 using pp::hw4::WriteGraphToFile;
+using pp::hw4::DeleteCosts;
 
 int main(int argc, char const *argv[]) {
     const unsigned kStrMax = 128;
@@ -56,7 +58,7 @@ int main(int argc, char const *argv[]) {
     //PrintCosts(stdout, graph);
 
     // Release the resource
-    delete[] graph->weights;
+    DeleteCosts(graph->weights);
     delete graph;
 
     return 0;
