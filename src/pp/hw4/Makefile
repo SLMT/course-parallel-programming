@@ -29,7 +29,7 @@ omp: normal_main $(COMMON_OBJS) apsp_omp.o block_calculation.o
 	$(CUDA_CC) $(OMP_FLAG) $(COMMON_OBJS) main.o apsp_omp.o block_calculation.o -o $(OPENMP_GPU_EXEC)
 
 mpi: mpi_main $(COMMON_OBJS) apsp_mpi.o block_calculation.o
-	$(CUDA_CC) $(MPI_LINK_FLAG) $(COMMON_OBJS) main.o apsp_multi_gpu.o block_calculation.o -o $(MPI_GPU_EXEC)
+	$(CUDA_CC) $(MPI_LINK_FLAG) $(COMMON_OBJS) main.o apsp_mpi.o block_calculation.o -o $(MPI_GPU_EXEC)
 
 # Different types of main file
 normal_main: main.cpp

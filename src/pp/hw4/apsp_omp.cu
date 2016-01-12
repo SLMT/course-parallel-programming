@@ -1,9 +1,10 @@
 #include "apsp.hpp"
 
+#include <cstdio>
 #include <omp.h>
 
 #include "block_calculation.hpp"
-#include "io.hpp" // debug
+#include "../timer.hpp"
 
 namespace pp {
 namespace hw4 {
@@ -11,6 +12,10 @@ namespace hw4 {
 typedef struct {
 	unsigned x_start, y_start, x_len, y_len;
 } Range;
+
+typedef struct {
+	Time mem_time, sync_time;
+} Profile;
 
 // XXX: This method only works in the case of 2 partition.
 // This is not scalable.
@@ -96,15 +101,19 @@ void CopyData(Cost *src, Cost *dst, Range r, unsigned num_nodes, unsigned block_
 	}
 }
 
-void ParallelCalcBlocks(Cost *local_buf, Cost *global_buf, Cost *gpu_data, Range *range, unsigned cc_num, unsigned self_id, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned bx, unsigned by, unsigned bxlen, unsigned bylen) {
+void ParallelCalcBlocks(Cost *local_buf, Cost *global_buf, Cost *gpu_data, Range *range, unsigned cc_num, unsigned self_id, unsigned num_nodes, unsigned block_size, unsigned round_idx, unsigned bx, unsigned by, unsigned bxlen, unsigned bylen, Profile *prof) {
+	Time start;
+
 	if (bxlen != 0 && bylen != 0) {
 		// Determine a range for calculation
 		DetermineCalculateRange(range, bx, by, bxlen, bylen);
 		Range my_range = range[self_id];
 
 		// Copy the data from Host to Device
+		start = GetCurrentTime();
 		unsigned data_size = sizeof(Cost) * num_nodes * num_nodes;
 		cudaMemcpy(gpu_data, local_buf, data_size, cudaMemcpyHostToDevice);
+		prof->mem_time = TimeAdd(prof->mem_time, TimeDiff(start, GetCurrentTime()));
 
 		//printf("Process %d in round %u range (%u, %u, %u, %u)\n", self_id, round_idx, my_range.x_start, my_range.y_start, my_range.x_len, my_range.y_len);
 
@@ -114,16 +123,22 @@ void ParallelCalcBlocks(Cost *local_buf, Cost *global_buf, Cost *gpu_data, Range
 		cudaThreadSynchronize();
 
 		// Copy the data from Device to Host
+		start = GetCurrentTime();
 		cudaMemcpy(local_buf, gpu_data, data_size, cudaMemcpyDeviceToHost);
+		prof->mem_time = TimeAdd(prof->mem_time, TimeDiff(start, GetCurrentTime()));
 
 		// Copy the data to global memory
+		start = GetCurrentTime();
 		CopyData(local_buf, global_buf, my_range, num_nodes, block_size);
 
 		// Synchronized between processes
 		#pragma omp barrier
 
 		// Copy all data from global memory
-		CopyAllData(global_buf, local_buf, num_nodes, block_size);
+		for (unsigned i = 0; i < cc_num; i++)
+			if (i != self_id)
+				CopyData(global_buf, local_buf, range[i], num_nodes, block_size);
+		prof->sync_time = TimeAdd(prof->sync_time, TimeDiff(start, GetCurrentTime()));
 	}
 }
 
@@ -135,6 +150,11 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	#pragma omp parallel default(shared)
 	{
 		int self_id = omp_get_thread_num();
+
+		// Initialize profile data
+		Profile prof;
+		prof.mem_time = GetZeroTime();
+		prof.sync_time = GetZeroTime();
 
 		// Device (GPU) Initialization
 		cudaSetDevice(self_id);
@@ -152,16 +172,6 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		unsigned data_size = sizeof(Cost) * nvertices * nvertices;
 		cudaMalloc((void **) &costs_on_gpu, data_size);
 
-		// XXX: Debug
-		// if (self_id == 1) {
-		// 	Graph g;
-		// 	g.num_vertices = graph->num_vertices;
-		// 	g.weights = costs;
-		// 	printf("Process %d, Original:\n", self_id);
-		// 	PrintCosts(stdout, &g);
-		// 	printf("\n");
-		// }
-
 		// Blocked-APSP Algorithm
 		unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
 		for (unsigned round_idx = 0; round_idx < num_rounds; round_idx++) {
@@ -169,48 +179,27 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 			unsigned rr1 = num_rounds - round_idx - 1;
 
 			// Phase 1
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, round_idx, 1, 1);
-
-			// XXX: Debug
-			// if (self_id == 1) {
-			// 	printf("Process %d, round %u, phase 1:\n", self_id, round_idx);
-			// 	PrintCosts(stdout, graph);
-			// 	printf("\n");
-			// }
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, round_idx, 1, 1, &prof);
 
 			// Phase 2
 			// Up
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, 0, 1, round_idx);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, 0, 1, round_idx, &prof);
 			// Left
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, round_idx, round_idx, 1);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, round_idx, round_idx, 1, &prof);
 			// Right
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, round_idx, rr1, 1);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, round_idx, rr1, 1, &prof);
 			// Down
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, rp1, 1, rr1);
-
-			// XXX: Debug
-			// if (self_id == 1) {
-			// 	printf("Process %d, round %u, phase 2:\n", self_id, round_idx);
-			// 	PrintCosts(stdout, graph);
-			// 	printf("\n");
-			// }
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, round_idx, rp1, 1, rr1, &prof);
 
 			// Phase 3
 			// Left-Up
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, 0, round_idx, round_idx);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, 0, round_idx, round_idx, &prof);
 			// Right-Up
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, 0, rr1, round_idx);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, 0, rr1, round_idx, &prof);
 			// Left-Down
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, rp1, round_idx, rr1);
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, 0, rp1, round_idx, rr1, &prof);
 			// Right-Down
-			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, rp1, rr1, rr1);
-
-			// XXX: Debug
-			// if (self_id == 1) {
-			// 	printf("Process %d, round %u, phase 3:\n", self_id, round_idx);
-			// 	PrintCosts(stdout, graph);
-			// 	printf("\n");
-			// }
+			ParallelCalcBlocks(costs, graph->weights, costs_on_gpu, range, cc_num, self_id, nvertices, block_size, round_idx, rp1, rp1, rr1, rr1, &prof);
 		}
 
 		// Free memory on GPU
@@ -219,6 +208,10 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 		// Deallocate the local buffer
 		DeleteCosts(costs);
 		delete[] range;
+
+		// Show the profile result
+		printf("Thread %d takes %ld ms on memory copying.\n", self_id, TimeToLongInMs(prof.mem_time));
+		printf("Thread %d takes %ld ms on synchronizing data.\n", self_id, TimeToLongInMs(prof.sync_time));
 	}
 
 }

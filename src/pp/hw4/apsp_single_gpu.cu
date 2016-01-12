@@ -1,11 +1,14 @@
 #include "apsp.hpp"
 
+#include <cstdio>
 #include "block_calculation.hpp"
+#include "../timer.hpp"
 
 namespace pp {
 namespace hw4 {
 
 void CalcAPSP(Graph *graph, unsigned block_size) {
+	Time mem_time, mem_start;
 	unsigned nvertices = graph->num_vertices;
 
 	// Device (GPU) Initialization
@@ -17,7 +20,9 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	cudaMalloc((void **) &costs_on_gpu, data_size);
 
 	// Copy the graph from Host to Device
+	mem_start = GetCurrentTime();
 	cudaMemcpy(costs_on_gpu, graph->weights, data_size, cudaMemcpyHostToDevice);
+	mem_time = TimeDiff(mem_start, GetCurrentTime());
 
 	// Blocked-APSP Algorithm
 	unsigned num_rounds = (nvertices % block_size == 0)? nvertices / block_size : nvertices / block_size + 1;
@@ -56,7 +61,10 @@ void CalcAPSP(Graph *graph, unsigned block_size) {
 	}
 
 	// Copy the result from Device to Host
+	mem_start = GetCurrentTime();
 	cudaMemcpy(graph->weights, costs_on_gpu, data_size, cudaMemcpyDeviceToHost);
+	mem_time = TimeAdd(mem_time, TimeDiff(mem_start, GetCurrentTime()));
+	printf("Memory copying takes %ld ms.\n", TimeToLongInMs(mem_time));
 
 	// Free memory on GPU
 	cudaFree(costs_on_gpu);

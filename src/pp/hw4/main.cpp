@@ -11,7 +11,10 @@
 
 using pp::Time;
 using pp::GetCurrentTime;
+using pp::TimeDiff;
 using pp::TimeDiffInMs;
+using pp::TimeAdd;
+using pp::TimeToLongInMs;
 using pp::hw4::Graph;
 using pp::hw4::ReadGraphFromFile;
 using pp::hw4::CalcAPSP;
@@ -19,6 +22,7 @@ using pp::hw4::WriteGraphToFile;
 using pp::hw4::DeleteCosts;
 
 int main(int argc, char *argv[]) {
+	Time io_start, io_time;
     const unsigned kStrMax = 128;
 
     // Check arguments
@@ -48,32 +52,33 @@ int main(int argc, char *argv[]) {
 
     // Read the graph
     Graph *graph = NULL;
-    if (self_id == 0)
+    if (self_id == 0) {
+		io_start = GetCurrentTime();
         graph = ReadGraphFromFile(in_file);
+		io_time = TimeDiff(io_start, GetCurrentTime());
+	}
 #else
+	io_start = GetCurrentTime();
     Graph *graph = ReadGraphFromFile(in_file);
+	io_time = TimeDiff(io_start, GetCurrentTime());
 #endif
 
-    // XXX: Debug
-    //PrintCosts(stdout, graph);
-
-    // Record the start time
-    Time start_time = GetCurrentTime();
+    // Record the computation time
+    Time compute_start = GetCurrentTime();
 
     // Calculate APSP
     CalcAPSP(graph, block_size);
 
     // Record the end time and print the time
-    Time end_time = GetCurrentTime();
-    printf("Calculation takes %ld ms.\n", TimeDiffInMs(start_time, end_time));
-
-    // XXX: Debug
-    //PrintCosts(stdout, graph);
+    printf("Whole APSP takes %ld ms.\n", TimeDiffInMs(compute_start, GetCurrentTime()));
 
 #ifdef MPI_IMPL
     if (self_id == 0) {
 		// Write to the file
+		io_start = GetCurrentTime();
         WriteGraphToFile(out_file, graph);
+		io_time = TimeAdd(io_time, TimeDiff(io_start, GetCurrentTime()));
+		printf("File IO takes %ld ms.\n", TimeToLongInMs(io_time));
 
 		// Release the resource
 	    DeleteCosts(graph->weights);
@@ -85,15 +90,15 @@ int main(int argc, char *argv[]) {
 
 #else
 	// Write to the file
+	io_start = GetCurrentTime();
     WriteGraphToFile(out_file, graph);
+	io_time = TimeAdd(io_time, TimeDiff(io_start, GetCurrentTime()));
+	printf("File IO takes %ld ms.\n", TimeToLongInMs(io_time));
 
 	// Release the resource
     DeleteCosts(graph->weights);
     delete graph;
 #endif
-
-    // XXX: Debug
-    //PrintCosts(stdout, graph);
 
     return 0;
 }
