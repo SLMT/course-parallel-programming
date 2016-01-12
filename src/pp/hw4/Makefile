@@ -6,20 +6,36 @@ LINK_FLAGS = -lX11 -fopenmp
 
 # File names
 SEQ_EXEC = seq
-SINGLE_CUDA_EXEC = single_cuda
-OPENMP_CUDA_EXEC = openmp_cuda
-MPI_CUDA_EXEC = mpi_cuda
+SINGLE_GPU_EXEC = hw4_cuda
+OPENMP_GPU_EXEC = hw4_openmp
+MPI_GPU_EXEC = hw4_mpi
 
-COMMON_OBJS = io.o main.o timer.o
+MPI_COMPILE_FLAG = -I/usr/include/mpich-x86_64
+MPI_LINK_FLAG = -L/usr/lib64/mpich/lib -lmpich
+
+COMMON_OBJS = io.o timer.o
 
 # Main target
-all: single_cuda openmp_cuda mpi_cuda
+all: single omp mpi
 
-seq_apsp: $(COMMON_OBJS) apsp_seq.o
-	$(CC) $(COMMON_OBJS) apsp_seq.o -o $(SEQ_EXEC)
+seq_apsp: normal_main $(COMMON_OBJS) main.cpp apsp_seq.o
+	$(CC) $(COMMON_OBJS) main.o apsp_seq.o -o $(SEQ_EXEC)
 
-single_cuda: $(COMMON_OBJS) apsp_single_gpu.o block_calculation.o
-	$(CUDA_CC) $(COMMON_OBJS) apsp_single_gpu.o block_calculation.o -o $(SINGLE_CUDA_EXEC)
+single: normal_main $(COMMON_OBJS) main.cpp apsp_single_gpu.o block_calculation.o
+	$(CUDA_CC) $(COMMON_OBJS) main.o apsp_single_gpu.o block_calculation.o -o $(SINGLE_GPU_EXEC)
+
+mpi: mpi_main $(COMMON_OBJS) main.cpp apsp_multi_gpu.o block_calculation.o
+	$(CUDA_CC) $(MPI_LINK_FLAG) $(COMMON_OBJS) main.o apsp_multi_gpu.o block_calculation.o -o $(MPI_GPU_EXEC)
+
+# Different types of main file
+normal_main: main.cpp
+	$(CC) -c -o main.o main.cpp
+
+mpi_main: main.cu
+	$(CUDA_CC) $(MPI_COMPILE_FLAG) -c -D MPI_IMPL -o main.o main.cu
+
+main.cu: main.cpp
+	cp main.cpp main.cu
 
 # To obtain object files
 %.o: %.cpp
@@ -34,6 +50,9 @@ block_calculation.o: block_calculation.cu
 apsp_single_gpu.o: apsp_single_gpu.cu
 	$(CUDA_CC) -c $< -o $@
 
+apsp_multi_gpu.o: apsp_multi_gpu.cu
+	$(CUDA_CC) $(MPI_COMPILE_FLAG) -c $< -o $@
+
 # To clean all output files
 clean:
-	rm -f *.o $(SINGLE_CUDA_EXEC) $(OPENMP_CUDA_EXEC) $(MPI_CUDA_EXEC)
+	rm -f *.o $(SINGLE_GPU_EXEC) $(OPENMP_GPU_EXEC) $(MPI_GPU_EXEC)
