@@ -5,9 +5,10 @@ BIN_DIR = .
 HW2_SRCC_DIR = src/pp/hw2/rccsim
 HW2_NBODY_DIR = src/pp/hw2/nbody
 HW3_DIR = src/pp/hw3
+HW4_DIR = src/pp/hw4
 
 ## All
-all: hw2 hw3
+all: hw2 hw3 hw4
 
 ## HW2
 hw2: hw2_srcc hw2_nbody
@@ -66,3 +67,21 @@ hw3_hybrid_dynamic:
 	cd $(HW3_DIR) && $(MAKE) hy_dynamic
 	mv $(HW3_DIR)/MS_Hybrid_dynamic $(BIN_DIR)
 	cd $(HW3_DIR) && $(MAKE) clean
+
+## hw4
+hw4: hw4_cuda hw4_omp hw4_mpi
+
+hw4_cuda:
+	cd $(HW4_DIR) && $(MAKE) single
+	mv $(HW4_DIR)/hw4_cuda $(BIN_DIR)
+	cd $(HW4_DIR) && $(MAKE) clean
+
+hw4_omp:
+	cd $(HW4_DIR) && $(MAKE) omp
+	mv $(HW4_DIR)/hw4_openmp $(BIN_DIR)
+	cd $(HW4_DIR) && $(MAKE) clean
+
+hw4_mpi:
+	cd $(HW4_DIR) && $(MAKE) mpi
+	mv $(HW4_DIR)/hw4_mpi $(BIN_DIR)
+	cd $(HW4_DIR) && $(MAKE) clean
